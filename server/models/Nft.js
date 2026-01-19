@@ -57,10 +57,9 @@ const NftSchema = new mongoose.Schema(
         message: 'Invalid Keccak256 hash format',
       },
     },
-    metadataURI: {
+    embeddedMetadata: {
       type: MetadataSchema,
-      required: [true, 'Please provide metadata URI'],
-      trim: true,
+      required: [true, 'Please provide embedded metadata'],
     },
     metadata: {
       type: Object,

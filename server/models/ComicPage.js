@@ -152,15 +152,6 @@ ComicPageSchema.post('save', async function () {
 });
 
 // Post-remove middleware to update comic's totalPages
-ComicPageSchema.post('findOneAndDelete', async function (doc) {
-  if (doc) {
-    const Comic = mongoose.model('Comic');
-    const count = await mongoose.model('ComicPage').countDocuments({
-      comicId: doc.comicId,
-    });
-    await Comic.findByIdAndUpdate(doc.comicId, { totalPages: count });
-  }
-});
 
 // Static utility to recalculate totalPages after bulk ops
 /**

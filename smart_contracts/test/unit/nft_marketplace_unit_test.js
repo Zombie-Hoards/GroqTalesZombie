@@ -200,7 +200,7 @@ const { developmentChains } = require('../../helper-hardhat-config');
               TOKEN_ID,
               updatedPrice
             )
-          ).to.emit('ItemListed');
+          ).to.emit(nftMarketplace, 'ItemListed');
           const listing = await nftMarketplace.getListing(
             monadNft.target,
             TOKEN_ID

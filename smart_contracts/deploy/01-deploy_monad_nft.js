@@ -12,7 +12,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     from: deployer,
     args: args,
     log: true,
-    waitConfirmations: network.config.blockConfirmations || 1,
+    waitConfirmations: network.config.blockConfirmations ?? 1,
   });
 
   if (
@@ -20,7 +20,7 @@ module.exports = async function ({ getNamedAccounts, deployments }) {
     process.env.MONADSCAN_API_KEY
   ) {
     log('Verifying ....');
-    await verify(monadNft.target, args);
+    await verify(monadNft.address, args);
   }
   log('__________________________________________________________');
 };

@@ -105,7 +105,7 @@ need to set these up before running the application:
 2. **Edit Environment Variables**: Open `.env.local` in a text editor and replace placeholder values
    with your actual credentials or mock values for development. **Do not commit `.env.local` to
    version control.** Key variables include:
-   - **WalletConnect Project ID**: For wallet integrations (`NEXT_PUBLIC_WALLET_CONECT_PROJECT_ID`).
+   - **WalletConnect Project ID**: For wallet integrations (`NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID`).
    - **API Keys**: For AI services like Groq (`NEXT_PUBLIC_GROQ_API_KEY`), Stability AI
      (`NEXT_PUBLIC_STABILITY_AI_API_KEY`), and others.
    - **IPFS Credentials**: For decentralized storage via Pinata (`NEXT_PUBLIC_PINATA_API_KEY`,
@@ -118,7 +118,7 @@ need to set these up before running the application:
    Example snippet from `.env.local` (values are placeholders):
 
    ```
-   NEXT_PUBLIC_WALLET_CONECT_PROJECT_ID=your_wallet_connect_project_id_here
+   NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_wallet_connect_project_id_here
    NEXT_PUBLIC_GROQ_API_KEY=your_groq_api_key_here
    MONAD_RPC_URL=https://testnet-rpc.monad.xyz
    NEXT_PUBLIC_BUILD_MODE=false
