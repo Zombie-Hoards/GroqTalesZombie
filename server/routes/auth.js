@@ -33,7 +33,7 @@ router.post('/signup', async (req, res) => {
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    assignedRole = 'user';
+    let assignedRole = 'user';
 
     if (role === 'admin') {
       const adminSecret = req.body.adminSecret;
@@ -42,13 +42,15 @@ router.post('/signup', async (req, res) => {
       }
       assignedRole = 'admin';
     }
-    const user = await User.create({
+    const user = new User({
       email: email,
       password: password,
       firstName: firstName,
       lastName: lastName,
       role: assignedRole,
-    }).exec();
+    });
+
+    await user.save();
 
     const accessToken = signAccessToken({ id: user._id, role: user.role });
     const refreshToken = signRefreshToken({ id: user._id, role: user.role });
@@ -88,7 +90,7 @@ router.post('/login', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'Missing email or password' });
     }
-    const user = await User.findOne({ email }).exec();
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
