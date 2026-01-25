@@ -45,8 +45,8 @@ router.post('/signup', async (req, res) => {
 
     await user.save();
 
-    const accessToken = signAccessToken({ id: user._id, role: user.role });
-    const refreshToken = signRefreshToken({ id: user._id, role: user.role });
+    const accessToken = signAccessToken({ id: user._id, role: assignedRole });
+    const refreshToken = signRefreshToken({ id: user._id, role: assignedRole });
 
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
@@ -64,7 +64,7 @@ router.post('/signup', async (req, res) => {
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role,
+          role: assignedRole,
         },
         tokens: { accessToken },
       },
