@@ -79,6 +79,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api/v1/auth', require('./routes/auth'));
 app.use('/api/v1/stories', require('./routes/stories'));
 app.use('/api/v1/comics', require('./routes/comics'));
 app.use('/api/v1/nft', require('./routes/nft'));
