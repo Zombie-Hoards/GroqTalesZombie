@@ -184,9 +184,9 @@ router.delete('/burn/:Id',authRequired, async (req, res) => {
     }
 
     // Optional: Add ownership check here if you have user auth
-    // if (nft.owner.toString() !== req.user.id) {
-    //   return res.status(403).json({ error: 'You are not the owner of this NFT' });
-    // }
+    if (nft.owner.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'You are not the owner of this NFT' });
+    }
 
     // Delete the NFT document (burn)
     await nft.deleteOne();
