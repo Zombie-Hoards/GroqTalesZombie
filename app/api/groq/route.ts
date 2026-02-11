@@ -76,12 +76,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ result });
   } catch (error: any) {
     console.error('Groq API error:', error);
+
+    // Return 400 for input validation errors, 500 for everything else
+    const isValidationError =
+      error.message && error.message.startsWith('Invalid input');
     return NextResponse.json(
       {
         error:
           error.message || 'An error occurred while processing your request',
       },
-      { status: 500 }
+      { status: isValidationError ? 400 : 500 }
     );
   }
 }
