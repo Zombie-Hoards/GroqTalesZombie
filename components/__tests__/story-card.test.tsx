@@ -162,7 +162,7 @@ describe('StoryCard', () => {
   describe('Cover Image', () => {
     it('renders cover image when provided', () => {
       render(<StoryCard story={mockStory} />);
-      const img = screen.getByAlt('The Quantum Garden');
+      const img = screen.getByAltText('The Quantum Garden');
       expect(img).toBeInTheDocument();
       expect(img).toHaveAttribute('src', '/covers/quantum-garden.jpg');
     });
@@ -170,7 +170,7 @@ describe('StoryCard', () => {
     it('renders fallback sparkles icon when no cover image', () => {
       render(<StoryCard story={minimalStory} />);
       // No img tag with story title alt should exist
-      expect(screen.queryByAlt('Untitled Draft')).not.toBeInTheDocument();
+      expect(screen.queryByAltText('Untitled Draft')).not.toBeInTheDocument();
     });
   });
 
