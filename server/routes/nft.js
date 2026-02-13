@@ -20,6 +20,68 @@ const { authRequired } = require('../middleware/auth');
 
 // NFT Endpoints
 
+/**
+ * @swagger
+ * /api/v1/nft:
+ *   get:
+ *     tags:
+ *       - NFT
+ *     summary: Get nft list
+ *     description: Returns a paginated list of nfts with optional filtering by category adn pricerange.
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         required: false
+ *         description: Page number for pagination.
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         required: false
+ *         description: Number of stories per page.
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filter stories by genre.
+ *       - in: query
+ *         name: priceRange
+ *         schema:
+ *           type: string
+ *         required: false
+ *         description: Filter nfts by pricerange.
+ *     responses:
+ *       200:
+ *         description: NFTs retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   description: List of nfts
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     page:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     total:
+ *                       type: integer
+ *                     pages:
+ *                       type: integer
+ *       500:
+ *         description: Internal server error.
+ */
 // GET /api/v1/nft - Get all NFTs with optional filters: category (genre), priceRange
 router.get('/', async (req, res) => {
   try {
@@ -107,12 +169,51 @@ router.get('/', async (req, res) => {
       requestId: req.id,
       component: 'nft',
     });
-  
+
     return res.status(500).json({ error: 'Internal server error' });
   }
-  
 });
 
+/**
+ * @swagger
+ * /api/v1/nft/mint:
+ *   get:
+ *     tags:
+ *       - NFT
+ *     summary: Mint nft
+ *     description: Mints a nft with given details
+ *     security:
+ *      - BearerAuth: []
+ *     requestBody:
+ *        required: true
+ *        content:
+ *          application/json:
+ *            schema:
+ *             type: object
+ *             properties: 
+ *                storyId:
+ *                  type: string
+ *                  required: true
+ *                metadataURI:
+ *                  type: string
+ *                  required: true
+ *                metadata:
+ *                  type: string
+ *                  required: true
+ *                price:
+ *                  type: string
+ *                  default: 0
+ *                  required: false
+ *     responses:
+ *       200:
+ *         description: NFTs minted successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *       500:
+ *         description: Internal server error.
+ */
 // POST /api/v1/nft/mint
 router.post('/mint', authRequired, async (req, res) => {
   try {
@@ -173,12 +274,36 @@ router.post('/mint', authRequired, async (req, res) => {
       storyId: req.body.storyId,
       userId: req.user?.id,
     });
-  
+
     return res.status(500).json({ error: 'Internal server error' });
   }
-  
 });
 
+
+
+/**
+ * @swagger
+ * /api/v1/nft/burn/{id} :
+ *   get:
+ *     tags:
+ *       - NFT
+ *     summary: burn nft
+ *     description: burns a nft with given id
+ *     security:
+ *      - BearerAuth: []
+ *     parameters:
+ *        - in: path
+ *          name: id
+ *          schema:
+ *            type: string
+ *          required: true
+ *          deafult: 0
+ *     responses:
+ *       200:
+ *         description: NFTs burned successfully.
+ *       500:
+ *         description: Internal server error.
+ */
 // DELETE /api/v1/nft/burn/:Id
 router.delete('/burn/:Id', authRequired, async (req, res) => {
   try {
@@ -219,13 +344,15 @@ router.delete('/burn/:Id', authRequired, async (req, res) => {
       tokenId: req.params.Id,
       userId: req.user?.id,
     });
-  
+
     return res.status(500).json({ error: 'Internal server error' });
   }
-  
 });
 
+
+
 // NFT Marketplace Endpoints
+
 // PATCH /api/v1/nft/list/:tokenId
 router.patch('/list/:tokenId', authRequired, async (req, res) => {
   try {
