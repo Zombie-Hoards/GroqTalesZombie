@@ -1,20 +1,9 @@
 'use client';
 
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import {
-  Heart,
-  Eye,
-  ShoppingCart,
-  Search,
-  Filter,
-  TrendingUp,
-  Star,
-  Palette,
-  BookOpen,
-  Users,
-} from 'lucide-react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
+import React from 'react';
 import {
   Select,
   SelectContent,
@@ -31,13 +20,101 @@ import {
 } from '@/components/ui/dialog';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
 import { useWeb3 } from '@/components/providers/web3-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
+
+// Lightweight animation fallbacks with optional framer-motion integration.
+// These avoid runtime errors when `framer-motion` isn't installed or during SSR,
+// but will use real `framer-motion` components if the package is available.
+
+const MotionDiv = React.forwardRef(function MotionDiv(props: any, ref: any) {
+  const [Comp, setComp] = useState<any>(() => (innerProps: any) => <div {...innerProps} ref={ref} />);
+
+  useEffect(() => {
+    let mounted = true;
+    import('framer-motion')
+      .then((mod) => {
+        if (!mounted) return;
+        if (mod && mod.motion && mod.motion.div) {
+          setComp(() => mod.motion.div);
+        }
+      })
+      .catch(() => {
+        // framer-motion not available — keep fallback
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return <Comp {...props} ref={ref} />;
+});
+
+const motion = { div: MotionDiv, motion: { div: MotionDiv } };
+
+const AnimatePresence = ({ children, ...rest }: { children: React.ReactNode } & any) => {
+  const [Comp, setComp] = useState<any>(() => ({ children }: any) => <>{children}</>);
+
+  useEffect(() => {
+    let mounted = true;
+    import('framer-motion')
+      .then((mod) => {
+        if (!mounted) return;
+        if (mod && mod.AnimatePresence) setComp(() => mod.AnimatePresence);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  return <Comp {...rest}>{children}</Comp>;
+};
+
+function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const update = () => setReduced(Boolean(mq.matches));
+    update();
+    if (mq.addEventListener) mq.addEventListener('change', update);
+    else mq.addListener(update);
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener('change', update);
+      else mq.removeListener(update);
+    };
+  }, []);
+
+  return reduced;
+}
+
+// Dynamically import icons to reduce bundle
+const IconsLoadable = dynamic(() => import('lucide-react').then(mod => ({
+  default: () => (
+    <div style={{ display: 'flex', gap: '4px' }}>
+      <span>♥</span> <span>👁</span> <span>🛒</span> <span>🔍</span> 
+      <span>⚙</span> <span>📈</span> <span>⭐</span> <span>🎨</span>
+    </div>
+  )
+})), { ssr: true });
+
+// Simple icon replacements to reduce bundle
+const Heart = ({ className = '' }: { className?: string }) => <span className={className}>♥</span>;
+const Eye = ({ className = '' }: { className?: string }) => <span className={className}>👁</span>;
+const ShoppingCart = ({ className = '' }: { className?: string }) => <span className={className}>🛒</span>;
+const Search = ({ className = '' }: { className?: string }) => <span className={className}>🔍</span>;
+const Filter = ({ className = '' }: { className?: string }) => <span className={className}>⚙</span>;
+const TrendingUp = ({ className = '' }: { className?: string }) => <span className={className}>📈</span>;
+const Star = ({ className = '' }: { className?: string }) => <span className={className}>⭐</span>;
+const Palette = ({ className = '' }: { className?: string }) => <span className={className}>🎨</span>;
+const BookOpen = ({ className = '' }: { className?: string }) => <span className={className}>📖</span>;
+const Users = ({ className = '' }: { className?: string }) => <span className={className}>👥</span>;
 
 interface NFTStory {
   id: string;
@@ -784,11 +861,14 @@ export default function NFTGalleryPage() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <label htmlFor="search-input" className="sr-only">Search stories or authors</label>
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" aria-hidden="true" />
               <Input
+                id="search-input"
                 placeholder="Search stories or authors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                aria-label="Search stories or authors"
                 className="pl-10
                 text-foreground
                 placeholder:text-muted-foreground
@@ -806,6 +886,7 @@ export default function NFTGalleryPage() {
           <div className="flex gap-2">
             <Select value={selectedGenre} onValueChange={setSelectedGenre}>
               <SelectTrigger
+                aria-label="Filter by genre"
                 className="
                 w-[150px]
                 bg-card
@@ -839,6 +920,7 @@ export default function NFTGalleryPage() {
               }
             >
               <SelectTrigger
+                aria-label="Sort NFTs by"
                 className="
                 w-[180px]
                 bg-card
