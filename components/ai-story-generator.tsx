@@ -167,7 +167,7 @@ This generated story demonstrates the power of AI-assisted creative writing, com
       
       // Check if this content has already been minted
       try {
-        const checkResponse = await fetch('/api/mint/check', {
+        const checkResponse = await fetch((process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com') + '/api/mint/check', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -245,7 +245,7 @@ This generated story demonstrates the power of AI-assisted creative writing, com
       const storyHash = currentStoryHash || generateContentHash(generatedContent);
 
       // Call the mint API with story hash for idempotency
-      const mintResponse = await fetch('/api/mint', {
+      const mintResponse = await fetch((process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com') + '/api/mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

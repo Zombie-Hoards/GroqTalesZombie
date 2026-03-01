@@ -3,7 +3,7 @@
  * the backend API (which proxies to CF Worker D1). Falls back gracefully.
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
 
 function feedsBase(): string {
     return API_URL;

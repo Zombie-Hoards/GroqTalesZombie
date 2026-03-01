@@ -51,7 +51,7 @@ export function StoryGenerator() {
     setCurrentStoryHash(contentHash);
     
     try {
-      const checkResponse = await fetch('/api/mint/check', {
+      const checkResponse = await fetch((process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com') + '/api/mint/check', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -88,7 +88,7 @@ export function StoryGenerator() {
     setIsGenerating(true);
     setMintStatus('idle');
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/generate`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com'}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, genre, creator: address }),
@@ -151,7 +151,7 @@ export function StoryGenerator() {
       const storyHash = currentStoryHash || generateContentHash(generatedStory);
       
       // Upload to IPFS first
-      const ipfsResponse = await fetch('/api/upload', {
+      const ipfsResponse = await fetch((process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com') + '/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,7 +167,7 @@ export function StoryGenerator() {
       const { metadataUri } = await ipfsResponse.json();
 
       // Mint NFT with story hash for idempotency
-      const mintResponse = await fetch('/api/mint', {
+      const mintResponse = await fetch((process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com') + '/api/mint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -28,7 +28,7 @@ export function useSystemHealth(): HealthStatus {
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     useEffect(() => {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
         if (!baseUrl) {
             setStatus((s) => ({ ...s, loading: false }));
             return;
