@@ -73,7 +73,12 @@ router.get('/profile', authRequired, async (req, res) => {
       .lean();
     if (!profile) return res.status(404).json({ success: false, error: 'Profile not found' });
 
-    const stories = await Story.find({ author: profile._id, moderationStatus: 'approved' })
+    const storyQuery = { author: profile._id };
+    if (!req.user || req.user.id !== profile._id.toString()) {
+      storyQuery.moderationStatus = 'approved';
+    }
+
+    const stories = await Story.find(storyQuery)
       .sort({ createdAt: -1 })
       .lean();
 

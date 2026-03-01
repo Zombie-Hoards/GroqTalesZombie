@@ -74,7 +74,12 @@ const axios = require('axios');
 // GET /api/v1/stories - Get all stories
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 10, genre, author, status } = req.query;
+    const { genre, author, status } = req.query;
+    let page = parseInt(req.query.page, 10);
+    if (isNaN(page) || page < 1) page = 1;
+    let limit = parseInt(req.query.limit, 10);
+    if (isNaN(limit) || limit < 1) limit = 10;
+    limit = Math.min(limit, 100);
     const query = {};
 
     if (genre) query.genre = String(genre);
@@ -163,13 +168,20 @@ router.get('/', async (req, res) => {
 router.post('/create', authRequired, async (req, res) => {
   try {
     const { title, content, genre, tags } = req.body;
+    let validTags = [];
+    if (tags !== undefined) {
+      if (!Array.isArray(tags)) {
+        return res.status(400).json({ error: 'tags must be an array' });
+      }
+      validTags = tags;
+    }
 
     const story = new Story({
       title,
       content,
       genre,
       author: req.user.id,
-      tags: tags || [],
+      tags: validTags,
       moderationStatus: 'pending',
     });
 

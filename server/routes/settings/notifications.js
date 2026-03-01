@@ -88,7 +88,13 @@ const { authRequired: requireAuth } = require("../../middleware/auth");
 
 router.get("/", requireAuth, async (req, res) => {
     try {
-        const settings = req.user.notificationSettings || {};
+        const User = require("../../models/User");
+        const user = await User.findById(req.user.id).lean();
+        if (!user) {
+            return res.status(404).json({ success: false, error: { message: "User not found" } });
+        }
+
+        const settings = user.notificationSettings || {};
         const emailSettings = settings.email || {};
         const inAppSettings = settings.inApp || {};
 
@@ -128,33 +134,48 @@ router.get("/", requireAuth, async (req, res) => {
 
 router.put("/", requireAuth, async (req, res) => {
     try {
+        const User = require("../../models/User");
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, error: { message: "User not found" } });
+        }
+
         const { email, push, comments, likes, follows, } = req.body;
 
-        // Ensure notificationSettings subdocs exist
-        if (!req.user.notificationSettings) req.user.notificationSettings = {};
-        if (!req.user.notificationSettings.email) req.user.notificationSettings.email = {};
-        if (!req.user.notificationSettings.inApp) req.user.notificationSettings.inApp = {};
+        // Ensure notificationSettings subdocs exist and are plain objects
+        if (!user.notificationSettings || typeof user.notificationSettings !== 'object') {
+            user.notificationSettings = {};
+        }
+        if (!user.notificationSettings.email || typeof user.notificationSettings.email !== 'object') {
+            user.notificationSettings.email = {};
+        }
+        if (!user.notificationSettings.inApp || typeof user.notificationSettings.inApp !== 'object') {
+            user.notificationSettings.inApp = {};
+        }
 
         if (typeof comments === "boolean")
-            req.user.notificationSettings.email.comments = comments;
+            user.notificationSettings.email.comments = comments;
         if (typeof likes === "boolean")
-            req.user.notificationSettings.email.likes = likes;
+            user.notificationSettings.email.likes = likes;
         if (typeof follows === "boolean")
-            req.user.notificationSettings.email.followers = follows;
+            user.notificationSettings.email.followers = follows;
         if (typeof email === "boolean")
-            req.user.notificationSettings.email.platform = email;
+            user.notificationSettings.email.platform = email;
         if (typeof push === "boolean")
-            req.user.notificationSettings.inApp.messages = push;
+            user.notificationSettings.inApp.messages = push;
 
-        await req.user.save();
+        // Mongoose needs to know the subdocument was modified if not using set()
+        user.markModified('notificationSettings');
+        await user.save();
+
         return res.json({
             success: true,
             data: {
-                email: req.user.notificationSettings.email.platform,
-                push: req.user.notificationSettings.inApp.messages,
-                comments: req.user.notificationSettings.email.comments,
-                likes: req.user.notificationSettings.email.likes,
-                follows: req.user.notificationSettings.email.followers,
+                email: user.notificationSettings.email.platform,
+                push: user.notificationSettings.inApp.messages,
+                comments: user.notificationSettings.email.comments,
+                likes: user.notificationSettings.email.likes,
+                follows: user.notificationSettings.email.followers,
 
             },
         });
