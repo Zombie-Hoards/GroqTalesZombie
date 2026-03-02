@@ -12,7 +12,8 @@ Active full support: 1.3.9 (latest). Security maintenance (critical fixes only):
 ## [1.3.9] - 2026-03-03
 
 ### Bug Fixes
-- **Cloudflare Pages Deployment Fix**: Fixed GitHub Action workflow `deployment.yml` to trigger on branches other than `main` and dynamically deploy to the current branch instead of hardcoding `main`. Also removed the restrictive repository name check.
+- **Cloudflare Pages Deployment Fix (Asset Validation)**: Fixed an issue where the Cloudflare Pages asset validation process would crash and timeout over 15 minutes due to an invalid C-style block comment (`/* ... */`) in `public/_headers`. Cloudflare treats `/*` as a path matcher for all routes, causing the subsequent comment text to be parsed as invalid HTTP headers. Replaced with valid `#` comments.
+- **Cloudflare Pages Deployment Fix (Actions)**: Fixed GitHub Action workflow `deployment.yml` to trigger on branches other than `main` and dynamically deploy to the current branch instead of hardcoding `main`. Also removed the restrictive repository name check.
 
 ### Story Creation Reversion & Enhancements
 
