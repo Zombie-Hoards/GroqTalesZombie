@@ -1,13 +1,11 @@
 /**
- * Users API Routes
- * Handles user authentication, profiles, and preferences
+ * Users API Routes — Supabase
+ * Handles user profiles and account management via Supabase PostgreSQL
  */
 
 const express = require('express');
-const mongoose = require('mongoose');
-const User = require('../models/User');
-const Story = require('../models/Story');
 const router = express.Router();
+const { supabaseAdmin } = require('../config/supabase');
 const { authRequired } = require('../middleware/auth');
 
 /**
@@ -17,7 +15,9 @@ const { authRequired } = require('../middleware/auth');
  *     tags:
  *       - Users
  *     summary: Get authenticated user profile
- *     description: Returns the authenticated user's profile, stories, and aggregate stats. Requires a valid JWT.
+ *     description: |
+ *       Returns the authenticated user's profile, their stories, and aggregate stats.
+ *       Requires a valid Supabase JWT in the Authorization header.
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -33,15 +33,26 @@ const { authRequired } = require('../middleware/auth');
  *                 data:
  *                   type: object
  *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
  *                     username:
  *                       type: string
- *                     firstName:
+ *                     email:
  *                       type: string
- *                     lastName:
+ *                     first_name:
+ *                       type: string
+ *                     last_name:
+ *                       type: string
+ *                     display_name:
  *                       type: string
  *                     bio:
  *                       type: string
- *                     avatar:
+ *                     avatar_url:
+ *                       type: string
+ *                     wallet_address:
+ *                       type: string
+ *                     role:
  *                       type: string
  *                     preferences:
  *                       type: object
@@ -65,47 +76,69 @@ const { authRequired } = require('../middleware/auth');
  *       500:
  *         description: Internal server error.
  */
-// GET /api/v1/users/profile - Get authenticated user's own profile
 router.get('/profile', authRequired, async (req, res) => {
   try {
-    const profile = await User.findById(req.user.id)
-      .select('-password -refreshToken')
-      .lean();
-    if (!profile) return res.status(404).json({ success: false, error: 'Profile not found' });
+    // Get profile
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('id', req.user.id)
+      .single();
 
-    const stories = await Story.find({ author: profile._id })
-      .sort({ createdAt: -1 })
-      .lean();
+    if (profileError || !profile) {
+      // Auto-create profile if it doesn't exist
+      const { data: newProfile, error: createError } = await supabaseAdmin
+        .from('profiles')
+        .upsert({
+          id: req.user.id,
+          email: req.user.email,
+          username: req.user.email?.split('@')[0] || `user_${req.user.id.slice(0, 8)}`,
+          first_name: req.user.raw?.user_metadata?.firstName || 'Anonymous',
+          last_name: req.user.raw?.user_metadata?.lastName || 'Creator',
+          display_name: req.user.raw?.user_metadata?.name || 'Anonymous Creator',
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        return res.status(500).json({ success: false, error: createError.message });
+      }
+
+      return res.json({
+        success: true,
+        data: { ...newProfile, preferences: getDefaultPreferences() },
+        stories: [],
+        stats: { storyCount: 0, totalLikes: 0, totalViews: 0 },
+      });
+    }
+
+    // Get user's stories
+    const { data: stories } = await supabaseAdmin
+      .from('stories')
+      .select('*')
+      .eq('author_id', req.user.id)
+      .order('created_at', { ascending: false });
+
+    const storyList = stories || [];
+
+    // Get user settings for preferences
+    const { data: settings } = await supabaseAdmin
+      .from('user_settings')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .single();
 
     return res.json({
       success: true,
       data: {
         ...profile,
-        preferences: {
-          notifications: {
-            comments: profile.notificationSettings?.email?.comments ?? true,
-            likes: profile.notificationSettings?.email?.likes ?? true,
-            follows: profile.notificationSettings?.email?.followers ?? true,
-            email: profile.notificationSettings?.email?.platform ?? true,
-            push: profile.notificationSettings?.inApp?.messages ?? false,
-            sms: false,
-            marketing: false,
-            updates: profile.notificationSettings?.email?.platform ?? true,
-          },
-          privacy: {
-            profileVisible: profile.privacySettings?.profilePublic ?? true,
-            activityVisible: profile.privacySettings?.showActivity ?? true,
-            storiesVisible: true,
-            showEmail: false,
-            showWallet: false,
-          },
-        },
+        preferences: settings ? formatPreferences(settings) : getDefaultPreferences(),
       },
-      stories,
+      stories: storyList,
       stats: {
-        storyCount: stories.length,
-        totalLikes: stories.reduce((sum, s) => sum + (s.stats?.likes || 0), 0),
-        totalViews: stories.reduce((sum, s) => sum + (s.stats?.views || 0), 0),
+        storyCount: storyList.length,
+        totalLikes: storyList.reduce((sum, s) => sum + (s.likes || 0), 0),
+        totalViews: storyList.reduce((sum, s) => sum + (s.views || 0), 0),
       },
     });
   } catch (error) {
@@ -113,44 +146,26 @@ router.get('/profile', authRequired, async (req, res) => {
   }
 });
 
-
 /**
  * @swagger
  * /api/v1/users/profile/id/{id}:
  *   get:
  *     tags:
  *       - Users
- *     summary: Get user profile by MongoDB ID
- *     description: Returns a public user profile, their stories, and stats by MongoDB ObjectId.
+ *     summary: Get user profile by UUID
+ *     description: Returns a public user profile with their stories and stats.
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
- *         description: MongoDB ObjectId of the user.
- *         example: 65f1c9e2d3a4b567890abc12
+ *           format: uuid
+ *         description: UUID of the user.
+ *         example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
  *     responses:
  *       200:
  *         description: Profile retrieved successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       type: object
- *                     stories:
- *                       type: array
- *                       items:
- *                         type: object
- *                     stats:
- *                       type: object
  *       400:
  *         description: Invalid user ID format.
  *       404:
@@ -158,36 +173,43 @@ router.get('/profile', authRequired, async (req, res) => {
  *       500:
  *         description: Internal server error.
  */
-// GET /api/v1/users/profile/id/:id - Get user profile by MongoDB ObjectId
 router.get('/profile/id/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, error: 'Invalid user ID format' });
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return res.status(400).json({ success: false, error: 'Invalid user ID format (must be UUID)' });
     }
 
-    const user = await User.findById(id)
-      .select('username bio avatar badges firstName lastName wallet walletAddress email socialLinks createdAt')
-      .lean();
+    const { data: user, error } = await supabaseAdmin
+      .from('profiles')
+      .select('id, username, first_name, last_name, display_name, bio, avatar_url, wallet_address, badges, social_twitter, social_website, created_at')
+      .eq('id', id)
+      .single();
 
-    if (!user) {
+    if (error || !user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
 
-    const stories = await Story.find({ author: user._id })
-      .sort({ createdAt: -1 })
-      .lean();
+    const { data: stories } = await supabaseAdmin
+      .from('stories')
+      .select('*')
+      .eq('author_id', id)
+      .order('created_at', { ascending: false });
+
+    const storyList = stories || [];
 
     return res.json({
       success: true,
       data: {
         user,
-        stories,
+        stories: storyList,
         stats: {
-          storyCount: stories.length,
-          totalLikes: stories.reduce((sum, s) => sum + (s.stats?.likes || 0), 0),
-          totalViews: stories.reduce((sum, s) => sum + (s.stats?.views || 0), 0),
+          storyCount: storyList.length,
+          totalLikes: storyList.reduce((sum, s) => sum + (s.likes || 0), 0),
+          totalViews: storyList.reduce((sum, s) => sum + (s.views || 0), 0),
         },
       },
     });
@@ -204,7 +226,7 @@ router.get('/profile/id/:id', async (req, res) => {
  *     tags:
  *       - Users
  *     summary: Get user profile by wallet address
- *     description: Returns a user profile by Ethereum wallet address. Creates a minimal profile if one doesn't exist (upsert).
+ *     description: Returns a user profile by Ethereum wallet address. Creates a minimal profile if one doesn't exist.
  *     parameters:
  *       - in: path
  *         name: walletAddress
@@ -217,30 +239,11 @@ router.get('/profile/id/:id', async (req, res) => {
  *     responses:
  *       200:
  *         description: Profile retrieved or created successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
- *                   properties:
- *                     user:
- *                       type: object
- *                     stories:
- *                       type: array
- *                       items:
- *                         type: object
- *                     stats:
- *                       type: object
  *       400:
  *         description: Invalid wallet address format.
  *       500:
  *         description: Internal server error.
  */
-// GET /api/v1/users/profile/:walletAddress - Get user profile by wallet address
 router.get('/profile/:walletAddress', async (req, res) => {
   try {
     const { walletAddress } = req.params;
@@ -248,35 +251,49 @@ router.get('/profile/:walletAddress', async (req, res) => {
     if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
       return res.status(400).json({ success: false, error: 'Invalid wallet address' });
     }
-    const addr = walletAddress.toLowerCase();
-    const user = await User.findOneAndUpdate(
-      { "wallet.address": addr },
-      {
-        $setOnInsert: {
-          wallet: { address: addr },
-          username: `user_${addr.slice(-6)}`
-        }
-      },
-      {
-        upsert: true,
-        new: true,
-      }
-    )
-      .select('username bio avatar badges firstName lastName wallet createdAt')
-      .lean();
 
-    const stories = await Story.find({ author: user._id })
-      .sort({ createdAt: -1 })
-      .lean();
+    const addr = walletAddress.toLowerCase();
+
+    const { data: user, error } = await supabaseAdmin
+      .from('profiles')
+      .select('*')
+      .eq('wallet_address', addr)
+      .single();
+
+    if (error || !user) {
+      // No profile with this wallet — return empty result (can't upsert without auth.users)
+      return res.json({
+        success: true,
+        data: {
+          user: {
+            wallet_address: addr,
+            username: `user_${addr.slice(-6)}`,
+            first_name: 'Anonymous',
+            last_name: 'Creator',
+          },
+          stories: [],
+          stats: { storyCount: 0, totalLikes: 0, totalViews: 0 },
+        },
+      });
+    }
+
+    const { data: stories } = await supabaseAdmin
+      .from('stories')
+      .select('*')
+      .eq('author_id', user.id)
+      .order('created_at', { ascending: false });
+
+    const storyList = stories || [];
+
     return res.json({
       success: true,
       data: {
         user,
-        stories,
+        stories: storyList,
         stats: {
-          storyCount: stories.length,
-          totalLikes: stories.reduce((sum, s) => sum + (s.stats?.likes || 0), 0),
-          totalViews: stories.reduce((sum, s) => sum + (s.stats?.views || 0), 0),
+          storyCount: storyList.length,
+          totalLikes: storyList.reduce((sum, s) => sum + (s.likes || 0), 0),
+          totalViews: storyList.reduce((sum, s) => sum + (s.views || 0), 0),
         },
       },
     });
@@ -286,7 +303,6 @@ router.get('/profile/:walletAddress', async (req, res) => {
   }
 });
 
-
 /**
  * @swagger
  * /api/v1/users/update:
@@ -294,7 +310,7 @@ router.get('/profile/:walletAddress', async (req, res) => {
  *     tags:
  *       - Users
  *     summary: Update user profile
- *     description: Updates allowed profile fields for the authenticated user. Cannot update password or role via this endpoint.
+ *     description: Updates allowed profile fields for the authenticated user.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -317,55 +333,97 @@ router.get('/profile/:walletAddress', async (req, res) => {
  *               email:
  *                 type: string
  *                 format: email
+ *               bio:
+ *                 type: string
+ *               username:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Profile updated successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
  *       400:
- *         description: Attempted to update restricted fields (password, role).
+ *         description: Attempted to update restricted fields.
  *       401:
- *         description: Unauthorized — missing or invalid JWT.
- *       404:
- *         description: Profile not found.
+ *         description: Unauthorized.
  *       500:
  *         description: Internal server error.
  */
-// PATCH /api/v1/users/update - Update user profile
 router.patch('/update', authRequired, async (req, res) => {
   try {
     const updates = req.body;
-    if (updates.password || updates.role) {
-      return res
-        .status(400)
-        .json({ error: 'Cannot update password or role via this endpoint' });
-    }
-    const allowed = [
-      'firstName',
-      'lastName',
-      'phone',
-      'walletAddress',
-      'email',
-    ];
-    Object.keys(updates).forEach((key) => {
-      if (!allowed.includes(key)) {
-        delete updates[key];
-      }
-    });
-    const updatedProfile = await User.findByIdAndUpdate(
-      req.user.id,
-      { $set: { ...updates } },
-      { new: true, upsert: false, runValidators: true }
-    ).lean();
-    if (!updatedProfile)
-      return res.status(404).json({ error: 'Profile not found' });
 
-    return res.json(updatedProfile);
+    if (updates.password || updates.role) {
+      return res.status(400).json({ error: 'Cannot update password or role via this endpoint' });
+    }
+
+    // Map request fields to database columns
+    const dbUpdates = {};
+    if (updates.firstName !== undefined) dbUpdates.first_name = updates.firstName;
+    if (updates.lastName !== undefined) dbUpdates.last_name = updates.lastName;
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+    if (updates.walletAddress !== undefined) dbUpdates.wallet_address = updates.walletAddress;
+    if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
+    if (updates.username !== undefined) dbUpdates.username = updates.username;
+
+    if (Object.keys(dbUpdates).length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+
+    const { data: updatedProfile, error } = await supabaseAdmin
+      .from('profiles')
+      .update(dbUpdates)
+      .eq('id', req.user.id)
+      .select()
+      .single();
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    if (!updatedProfile) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    return res.json({ success: true, data: updatedProfile });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
+
+// Helper: format settings into preferences shape expected by frontend
+function formatPreferences(settings) {
+  return {
+    notifications: {
+      comments: settings.notif_email_comments ?? true,
+      likes: settings.notif_email_likes ?? true,
+      follows: settings.notif_email_followers ?? true,
+      email: settings.notif_email_platform ?? false,
+      push: settings.notif_inapp_messages ?? false,
+      sms: false,
+      marketing: false,
+      updates: settings.notif_email_platform ?? false,
+    },
+    privacy: {
+      profileVisible: settings.privacy_profile_public ?? true,
+      activityVisible: settings.privacy_show_activity ?? true,
+      storiesVisible: true,
+      showEmail: false,
+      showWallet: false,
+    },
+  };
+}
+
+function getDefaultPreferences() {
+  return {
+    notifications: {
+      comments: true, likes: true, follows: true,
+      email: false, push: false, sms: false, marketing: false, updates: false,
+    },
+    privacy: {
+      profileVisible: true, activityVisible: true, storiesVisible: true,
+      showEmail: false, showWallet: false,
+    },
+  };
+}
 
 module.exports = router;

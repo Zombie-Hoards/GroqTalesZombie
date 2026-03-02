@@ -1,6 +1,6 @@
 {
   "name": "groqtales-backend",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "description": "Backend API for GroqTales Web3 storytelling platform",
   "license": "MIT",
   "author": "",
@@ -30,6 +30,7 @@
     "sharp": "^0.33.0",
     "swagger-jsdoc": "6.2.8",
     "swagger-ui-express": "5.0.1",
+    "@supabase/supabase-js": "^2.49.4",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

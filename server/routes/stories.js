@@ -1,13 +1,12 @@
 /**
- * Stories API Routes
- * Handles story generation, analysis, and management endpoints
+ * Stories API Routes — Supabase
+ * Handles story CRUD and AI generation via Supabase PostgreSQL
  */
 
 const express = require('express');
 const router = express.Router();
-const Story = require('../models/Story');
+const { supabaseAdmin } = require('../config/supabase');
 const { authRequired } = require('../middleware/auth');
-const axios = require('axios');
 
 /**
  * @swagger
@@ -23,79 +22,69 @@ const axios = require('axios');
  *         schema:
  *           type: integer
  *           default: 1
- *         required: false
  *         description: Page number for pagination.
  *       - in: query
  *         name: limit
  *         schema:
  *           type: integer
  *           default: 10
- *         required: false
  *         description: Number of stories per page.
  *       - in: query
  *         name: genre
  *         schema:
  *           type: string
- *         required: false
  *         description: Filter stories by genre.
  *       - in: query
  *         name: author
  *         schema:
  *           type: string
- *         required: false
- *         description: Filter stories by author.
+ *         description: Filter stories by author UUID.
  *     responses:
  *       200:
  *         description: Stories retrieved successfully.
  *         content:
-*           application/json:
-*             schema:
-*               type: object
-*               properties:
-*                 data:
-*                   type: array
-*                   description: List of stories
-*                   items:
-*                     type: object
-*                 pagination:
-*                   type: object
-*                   properties:
-*                     page:
-*                       type: integer
-*                     limit:
-*                       type: integer
-*                     total:
-*                       type: integer
-*                     pages:
-*                       type: integer
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
  *       500:
  *         description: Internal server error.
  */
-// GET /api/v1/stories - Get all stories
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 10, genre, author } = req.query;
-    const query = {};
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const { genre, author } = req.query;
 
-    if (genre) query.genre = genre;
-    if (author) query.author = author;
+    let query = supabaseAdmin.from('stories').select('*, profiles!author_id(username, avatar_url, display_name)', { count: 'exact' });
 
-    const stories = await Story.find(query)
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
-      .sort({ createdAt: -1 })
-      .lean()
-      .exec();
+    if (genre) query = query.eq('genre', genre);
+    if (author) query = query.eq('author_id', author);
 
-    const count = await Story.countDocuments(query);
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    const { data: stories, count, error } = await query
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
 
     return res.json({
-      data: stories,
+      data: stories || [],
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: count,
-        pages: Math.ceil(count / limit),
+        page,
+        limit,
+        total: count || 0,
+        pages: Math.ceil((count || 0) / limit),
       },
     });
   } catch (error) {
@@ -110,7 +99,7 @@ router.get('/', async (req, res) => {
  *     tags:
  *       - Stories
  *     summary: Create a new story
- *     description: Creates a new story and returns the created story object.
+ *     description: Creates a new story in Supabase and returns the created story object.
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -119,64 +108,66 @@ router.get('/', async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - title
+ *               - content
+ *               - genre
  *             properties:
  *               title:
  *                 type: string
- *                 required: true
+ *                 example: "The Last Algorithm"
  *               content:
  *                 type: string
- *                 required: true
+ *                 example: "Once upon a time in a digital world..."
  *               genre:
  *                 type: string
- *                 required: true
+ *                 enum: [fantasy, sci-fi, mystery, adventure, horror, romance, other]
+ *                 example: sci-fi
  *     responses:
  *       201:
  *         description: Story created successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
+ *       400:
+ *         description: Missing required fields.
  *       500:
  *         description: Internal server error.
  */
-// POST /api/v1/stories/create - Create new story
 router.post('/create', authRequired, async (req, res) => {
   try {
-    const { title, content, genre } = req.body;
+    const { title, content, genre, description, coverImage } = req.body;
 
-    const story = new Story({
-      title,
-      content,
-      genre,
-      author: req.user.id,
-    });
+    if (!title || !content || !genre || !description) {
+      return res.status(400).json({ error: 'title, content, genre, and description are required' });
+    }
 
-    await story.save();
+    // Get author's display name
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('username, display_name')
+      .eq('id', req.user.id)
+      .single();
 
-    // Synchronize to Cloudflare D1 database
-    try {
-      const workerUrl = process.env.CF_WORKER_URL || 'https://groqtales-backend.groqtales.workers.dev';
-      // req.user.id or req.user.sub depending on JWT issuer
-      const authorId = req.user.sub || req.user.id;
-
-      await axios.post(`${workerUrl}/api/stories`, {
+    const { data: story, error } = await supabaseAdmin
+      .from('stories')
+      .insert({
         title,
+        description,
+        cover_image: coverImage || null,
         content,
-        genre: [genre], // assuming D1 expects tags/genres as array maybe
-      }, {
-        headers: {
-          'Authorization': `Bearer ${authorId}`
-        }
-      });
-    } catch (cfError) {
-      console.error('Failed to sync story to Cloudflare DB:', cfError.message);
-      // We don't throw here to ensure Mongo save isn't rolled back since it succeeded, 
-      // but in a robust system this could be handled with a message queue.
+        genre: genre.toLowerCase(),
+        author_id: req.user.id,
+        author_name: profile?.display_name || profile?.username || 'Anonymous',
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Story creation error:', error);
+      return res.status(500).json({ error: error.message });
     }
 
     return res.status(201).json(story);
   } catch (error) {
-    console.log(error)
+    console.error(error);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -187,34 +178,41 @@ router.post('/create', authRequired, async (req, res) => {
  *   get:
  *     tags:
  *       - Stories
- *     summary: get stories by id
- *     description: retunns the story of u=the given id
- *     security:
- *        - BearerAuth: []
+ *     summary: Get story by ID
+ *     description: Returns a single story by its UUID.
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *           format: uuid
+ *         description: UUID of the story.
  *     responses:
  *       200:
- *         description: Stories retrieved successfully.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
+ *         description: Story retrieved successfully.
+ *       404:
+ *         description: Story not found.
  *       500:
  *         description: Internal server error.
  */
-// GET /api/v1/stories/search/:id - Get story by ID
 router.get('/search/:id', async (req, res) => {
   try {
-    const story = await Story.findById(req.params.id).lean();
+    const { data: story, error } = await supabaseAdmin
+      .from('stories')
+      .select('*, profiles!author_id(username, avatar_url, display_name)')
+      .eq('id', req.params.id)
+      .single();
 
-    if (!story) {
+    if (error || !story) {
       return res.status(404).json({ error: 'Story not found' });
     }
+
+    // Increment view count
+    await supabaseAdmin
+      .from('stories')
+      .update({ views: (story.views || 0) + 1 })
+      .eq('id', req.params.id);
 
     return res.json(story);
   } catch (error) {
@@ -222,24 +220,48 @@ router.get('/search/:id', async (req, res) => {
   }
 });
 
-// POST /api/v1/stories/generate - Generate story with AI
+/**
+ * @swagger
+ * /api/v1/stories/generate:
+ *   post:
+ *     tags:
+ *       - Stories
+ *     summary: Generate story with AI
+ *     description: Generates a story using AI based on the given prompt (placeholder).
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *               genre:
+ *                 type: string
+ *               length:
+ *                 type: string
+ *               style:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Story generated successfully.
+ *       500:
+ *         description: Internal server error.
+ */
 router.post('/generate', authRequired, async (req, res) => {
   try {
     const { prompt, genre, length, style } = req.body;
 
-    // Placeholder implementation - integrate with Groq API
-    // This part remains a placeholder as per "What Remains to be Done"
+    // Placeholder implementation
     const generatedStory = {
-      id: Date.now().toString(),
+      id: require('crypto').randomUUID(),
       title: 'AI Generated Story',
       content: 'Generated story content based on prompt...',
       genre,
-      metadata: {
-        prompt,
-        length,
-        style,
-        generatedAt: new Date().toISOString(),
-      },
+      metadata: { prompt, length, style, generatedAt: new Date().toISOString() },
     };
 
     return res.json(generatedStory);
@@ -248,12 +270,33 @@ router.post('/generate', authRequired, async (req, res) => {
   }
 });
 
-// POST /api/v1/stories/:id/analyze - Analyze story content
+/**
+ * @swagger
+ * /api/v1/stories/{id}/analyze:
+ *   post:
+ *     tags:
+ *       - Stories
+ *     summary: Analyze story content
+ *     description: Analyzes a story and returns sentiment, themes, and readability (placeholder).
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Analysis completed.
+ *       500:
+ *         description: Internal server error.
+ */
 router.post('/:id/analyze', authRequired, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Placeholder implementation - integrate with analysis service
     const analysis = {
       storyId: id,
       sentiment: 'positive',

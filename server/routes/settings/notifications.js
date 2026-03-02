@@ -1,5 +1,10 @@
-const router = require("express").Router();
-const { authRequired: requireAuth } = require("../../middleware/auth");
+/**
+ * Notification Settings Route — Supabase
+ */
+
+const router = require('express').Router();
+const { authRequired: requireAuth } = require('../../middleware/auth');
+const { supabaseAdmin } = require('../../config/supabase');
 
 /**
  * @swagger
@@ -8,7 +13,7 @@ const { authRequired: requireAuth } = require("../../middleware/auth");
  *     tags:
  *       - Settings
  *     summary: Get notification settings
- *     description: Returns the authenticated user's notification preferences (email, push, comments, likes, follows).
+ *     description: Returns the authenticated user's notification preferences.
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -71,95 +76,87 @@ const { authRequired: requireAuth } = require("../../middleware/auth");
  *     responses:
  *       200:
  *         description: Notification settings updated.
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   type: object
  *       401:
  *         description: Unauthorized.
  *       500:
  *         description: Internal server error.
  */
 
-router.get("/", requireAuth, async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
     try {
-        const settings = req.user.notificationSettings;
+        const { data: settings, error } = await supabaseAdmin
+            .from('user_settings')
+            .select('*')
+            .eq('user_id', req.user.id)
+            .single();
+
+        if (error || !settings) {
+            // Return defaults
+            return res.json({
+                success: true,
+                data: {
+                    email: false, push: false, sms: false,
+                    marketing: false, updates: false,
+                    comments: true, likes: true, follows: true,
+                },
+            });
+        }
 
         return res.json({
             success: true,
             data: {
-                email: settings.email.platform ?? false,
-                push: settings.inApp.messages ?? false,
+                email: settings.notif_email_platform ?? false,
+                push: settings.notif_inapp_messages ?? false,
                 sms: false,
-                marketing: settings.email.platform ?? false,
-                updates: settings.email.platform ?? false,
-                comments: settings.email.comments ?? false,
-                likes: settings.email.likes ?? false,
-                follows: settings.email.followers ?? false,
-
-                // likes: req.user.notificationSettings.email.likes,
-                // followers: req.user.notificationSettings.email.followers,
-                // nftSales: req.user.notificationSettings.email.nftSales,
-                // platform: req.user.notificationSettings.email.platform,
-
-                // inApp: {
-                //     comments: req.user.notificationSettings.inApp.comments,
-                //     likes: req.user.notificationSettings.inApp.likes,
-                //     followers: req.user.notificationSettings.inApp.follwers,
-                //     messages: req.user.notificationSettings.inApp.messages,
-                // },
+                marketing: settings.notif_email_platform ?? false,
+                updates: settings.notif_email_platform ?? false,
+                comments: settings.notif_email_comments ?? true,
+                likes: settings.notif_email_likes ?? true,
+                follows: settings.notif_email_followers ?? true,
             },
         });
     } catch (err) {
-        console.log("Fetch notification settings failed:", err);
-        res.status(500).json({
-            success: false,
-            error: { message: "Failed to fetch notification settings" },
-        });
+        console.error('Fetch notification settings failed:', err);
+        res.status(500).json({ success: false, error: { message: 'Failed to fetch notification settings' } });
     }
 });
 
-router.put("/", requireAuth, async (req, res) => {
+router.put('/', requireAuth, async (req, res) => {
     try {
-        const { email, push, comments, likes, follows, } = req.body;
-        //const current = req.user.notificationSettings;
+        const { email, push, comments, likes, follows } = req.body;
 
-        if (typeof comments === "boolean")
-            req.user.notificationSettings.email.comments = comments;
-        if (typeof likes === "boolean")
-            req.user.notificationSettings.email.likes = likes;
-        if (typeof follows === "boolean")
-            req.user.notificationSettings.email.followers = follows;
-        if (typeof email === "boolean")
-            req.user.notificationSettings.email.platform = email;
-        if (typeof push === "boolean")
-            req.user.notificationSettings.inApp.messages = push;
+        const updates = {};
+        if (typeof comments === 'boolean') updates.notif_email_comments = comments;
+        if (typeof likes === 'boolean') updates.notif_email_likes = likes;
+        if (typeof follows === 'boolean') updates.notif_email_followers = follows;
+        if (typeof email === 'boolean') updates.notif_email_platform = email;
+        if (typeof push === 'boolean') updates.notif_inapp_messages = push;
 
-        await req.user.save();
+        const { data, error } = await supabaseAdmin
+            .from('user_settings')
+            .upsert({ user_id: req.user.id, ...updates })
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Notification settings update error:', error);
+            return res.status(500).json({ success: false, error: { message: 'Failed to update notification settings' } });
+        }
+
         return res.json({
             success: true,
             data: {
-                email: req.user.notificationSettings.email.platform,
-                push: req.user.notificationSettings.inApp.messages,
-                comments: req.user.notificationSettings.email.comments,
-                likes: req.user.notificationSettings.email.likes,
-                follows: req.user.notificationSettings.email.followers,
-
+                email: data.notif_email_platform,
+                push: data.notif_inapp_messages,
+                comments: data.notif_email_comments,
+                likes: data.notif_email_likes,
+                follows: data.notif_email_followers,
             },
         });
     } catch (err) {
-        console.error("Notification settings update failed:", err);
-        res.status(500).json({
-            success: false,
-            error: { message: "Failed to update notification settings" },
-        });
+        console.error('Notification settings update failed:', err);
+        res.status(500).json({ success: false, error: { message: 'Failed to update notification settings' } });
     }
 });
-
 
 module.exports = router;
