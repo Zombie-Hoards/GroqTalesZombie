@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 export default function UploadPage() {
     const [activeTab, setActiveTab] = useState<'document' | 'write'>('document');
@@ -27,6 +28,34 @@ export default function UploadPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const router = useRouter();
+    const supabase = React.useMemo(() => createClient(), []);
+
+    React.useEffect(() => {
+        const checkAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            const isServerAdmin = session?.user?.user_metadata?.role === 'admin';
+
+            if (!session || !isServerAdmin) {
+                if (!session) {
+                    toast({
+                        title: 'Access Denied',
+                        description: 'Please log in to upload stories.',
+                        variant: 'destructive',
+                    });
+                    router.push('/sign-in');
+                } else {
+                    toast({
+                        title: 'Unauthorized',
+                        description: 'You do not have permission to access the upload page.',
+                        variant: 'destructive',
+                    });
+                    router.push('/');
+                }
+            }
+        };
+
+        checkAuth();
+    }, [supabase.auth, router, toast]);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -97,8 +126,13 @@ export default function UploadPage() {
         setIsSubmitting(true);
 
         try {
-            const token = localStorage.getItem('accessToken');
-            if (!token) throw new Error("Authentication required");
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token || localStorage.getItem('accessToken');
+            const isServerAdmin = session?.user?.user_metadata?.role === 'admin';
+
+            if (!token && !isServerAdmin) {
+                throw new Error("Authentication required");
+            }
 
             const formData = new FormData();
             formData.append('title', title);
@@ -106,7 +140,7 @@ export default function UploadPage() {
 
             let endpoint = 'https://groqtales-backend-api.onrender.com/api/v1/stories';
             let requestOptions: RequestInit = {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
             };
 
             if (activeTab === 'document' && file) {
