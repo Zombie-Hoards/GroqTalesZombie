@@ -4,6 +4,9 @@
  */
 
 const express = require('express');
+const express = require('express');
+const axios = require('axios');
+const logger = require('../utils/logger');
 const router = express.Router();
 const { supabaseAdmin } = require('../config/supabase');
 const { authRequired } = require('../middleware/auth');
@@ -219,6 +222,42 @@ router.get('/profile/id/:id', async (req, res) => {
   }
 });
 
+// GET /api/v1/users/profile/username/:username - Get user profile by username
+router.get('/profile/username/:username', async (req, res) => {
+  try {
+    const { username } = req.params;
+
+    // Intentionally exclude email, wallet, walletAddress for public responses
+    const user = await User.findOne({ username })
+      .select('username bio avatar badges firstName lastName socialLinks createdAt')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    const stories = await Story.find({ author: user._id, moderationStatus: 'approved' })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      data: {
+        user,
+        stories,
+        stats: {
+          storyCount: stories.length,
+          totalLikes: stories.reduce((sum, s) => sum + (s.stats?.likes || 0), 0),
+          totalViews: stories.reduce((sum, s) => sum + (s.stats?.views || 0), 0),
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Profile by Username Route Error:', error);
+    return res.status(500).json({ success: false, error: 'Internal Server Error' });
+  }
+});
+
 /**
  * @swagger
  * /api/v1/users/profile/{walletAddress}:
@@ -284,7 +323,6 @@ router.get('/profile/:walletAddress', async (req, res) => {
       .order('created_at', { ascending: false });
 
     const storyList = stories || [];
-
     return res.json({
       success: true,
       data: {
@@ -351,6 +389,7 @@ router.patch('/update', authRequired, async (req, res) => {
   try {
     const updates = req.body;
 
+
     if (updates.password || updates.role) {
       return res.status(400).json({ error: 'Cannot update password or role via this endpoint' });
     }
@@ -384,8 +423,31 @@ router.patch('/update', authRequired, async (req, res) => {
       return res.status(404).json({ error: 'Profile not found' });
     }
 
+    // Attempt to sync to Cloudflare D1
+    const workerUrl = process.env.CF_WORKER_URL || 'https://groqtales-backend-workers.mantejsingh.workers.dev';
+    const CF_SYNC_ENDPOINT = `${workerUrl}/api/profiles/${req.user.id}`;
+    const token = req.headers.authorization?.split(' ')[1];
+
+    try {
+      await axios.put(CF_SYNC_ENDPOINT, {
+        username: updatedProfile.username,
+        bio: updatedProfile.bio,
+        avatar_url: updatedProfile.avatar_url || null
+      }, {
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+          'Content-Type': 'application/json'
+        },
+        timeout: 5000
+      });
+    } catch (cfError) {
+      logger.error('Failed to sync profile to Cloudflare worker:', cfError.message);
+      // Non-blocking error
+    }
+
     return res.json({ success: true, data: updatedProfile });
   } catch (error) {
+    logger.error('Profile update failed:', error.message);
     return res.status(500).json({ error: error.message });
   }
 });

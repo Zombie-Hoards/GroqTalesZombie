@@ -54,8 +54,8 @@ const options = {
     },
     servers: [
       {
-        url: process.env.URL || 'http://localhost:' + PORT + '/',
-        description: process.env.NODE_ENV === 'production' ? 'Production Server' : 'Development Server',
+        url: process.env.PROD_URL || 'https://groqtales-backend-api.onrender.com/api',
+        description: 'Production',
       },
     ],
     tags: [
@@ -293,10 +293,14 @@ app.use(
   })
 );
 
+// Trust proxy for rate limiting behind Render/Cloudflare load balancers
+app.set('trust proxy', 1);
+
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  skip: (req) => req.originalUrl.startsWith('/api/health'),
   message: {
     error: 'Too many requests from this IP, please try again later.',
   },
@@ -527,10 +531,12 @@ app.use('/api/v1/stories', require('./routes/stories'));
 app.use('/api/v1/comics', require('./routes/comics'));
 app.use('/api/v1/nft', require('./routes/nft'));
 app.use('/api/v1/users', require('./routes/users'));
-
-app.use('/api/feed', require('./routes/feed'));
+app.use('/api/v1/admin', require('./routes/admin'));
 app.use('/api/helpbot', require('./routes/helpbot'));
 app.use('/api/v1/helpbot', require('./routes/helpbot'));
+
+app.use('/api/feed', require('./routes/feed'));
+app.use('/api/feeds', require('./routes/notification-feed'));
 
 
 app.use('/api/v1/ai', require('./routes/ai'));

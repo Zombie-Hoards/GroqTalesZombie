@@ -88,47 +88,6 @@ router.get('/', async (req, res) => {
             return res.status(503).json({ error: 'Database not configured' });
         }
 
-        const limit = parseInt(req.query.limit) || 6;
-        const page = parseInt(req.query.page) || 1;
-        const genre = req.query.genre;
-
-        const from = (page - 1) * limit;
-        const to = from + limit - 1;
-
-        let query = supabaseAdmin
-            .from('stories')
-            .select('id, title, description, cover_image, content, genre, author_id, author_name, views, likes, is_minted, created_at, profiles!author_id(username, avatar_url, display_name)', { count: 'exact' });
-
-        if (genre) {
-            query = query.eq('genre', genre.toLowerCase());
-        }
-
-        const { data: stories, count, error } = await query
-            .order('created_at', { ascending: false })
-            .range(from, to);
-
-        if (error) {
-            logger.error(`Feed query error: ${error.message}`);
-            return res.status(500).json({ error: 'Failed to fetch feed', message: error.message });
-        }
-
-        // Format response to match expected frontend shape
-        const formattedStories = (stories || []).map(story => ({
-            id: story.id,
-            title: story.title,
-            description: story.description || story.content?.substring(0, 200) + (story.content?.length > 200 ? '...' : ''),
-            cover_image: story.cover_image || null,
-            content: story.content?.substring(0, 200) + (story.content?.length > 200 ? '...' : ''),
-            genre: story.genre,
-            author_id: story.author_id,
-            author_name: story.profiles?.display_name || story.profiles?.username || story.author_name || 'Anonymous',
-            author_avatar: story.profiles?.avatar_url || null,
-            views: story.views || 0,
-            likes: story.likes || 0,
-            is_minted: story.is_minted || false,
-            created_at: story.created_at,
-        }));
-
         return res.json({
             stories: formattedStories,
             pagination: {
