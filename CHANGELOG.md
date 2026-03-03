@@ -7,7 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Supported Versions
 
-Active full support: 1.3.9 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+Active full support: 1.3.100 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+
+## [1.3.100] - 2026-03-02
+
+### Added
+- **Top Creators API Endpoint**: Added a new `/api/v1/users/top-creators` route to fetch users and dynamically aggregate their statistics (likes, stories, views).
+- **Creators Page UI Overhaul**: Reworked `/community/creators` with a premium, sleek dark mode theme matching the platform's new aesthetic. Synced the page entirely with the new backend endpoint, replacing all mock data.
+- **Improved Contact Page**: Completely migrated the `/contact` page to a new professional layout and dark-mode premium look.
+- **Home Page Enhancements**: Updated specific links in the footer, implemented the required "Start Creating" hero navigation, and added a hero image to the "publish to the world" section.
+- **Gallery Upload Pipeline**: Added an interactive `/upload` page supporting 50MB PDF, DOCX, TXT, and MD files.
+- **Synoptic AI Agent**: Integrated Groq AI to automatically parse uploaded files and generate rich, 2-3 sentence synopses.
+- **Real-Time Archive Gallery**: Created a modern `/gallery` page to replace the old `/nft-gallery`, now perfectly synced with un-minted community works.
+- **Format Typings**: Authors can classify their uploads as 'Storybook' or 'Comic Book'.
+- **Blog Platform**: Created a premium `/blog` page containing the DEV.to article, built with custom typography and scroll progress indicators.
+
+### Fixed
+- **Floating Buttons**: Aligned the "Help Bot" and "Scroll to Top" floating action buttons horizontally on the screen.
+
+### Removed
+- **NFT Gallery**: The old static mock-data `/nft-gallery` was entirely removed and replaced with the real-time `/gallery`.
 
 ## [1.3.9] - Unreleased
 

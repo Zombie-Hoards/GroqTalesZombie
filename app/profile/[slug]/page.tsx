@@ -5,10 +5,6 @@
  */
 export const dynamicParams = true;
 
-export function generateStaticParams() {
-    return [{ slug: 'me' }];
-}
-
 import ProfilePageClient from './client';
 
 export default function ProfilePage({
