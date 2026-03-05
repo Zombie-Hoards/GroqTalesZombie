@@ -196,17 +196,30 @@ app.get('/genres', (req, res) => {
   });
 });
 
+// Shared-secret auth for internal worker endpoints
+function workerAuth(req, res, next) {
+  const secret = process.env.WORKER_SECRET;
+  if (!secret) return next(); // If no secret configured, allow (dev mode)
+  const provided = req.headers['x-worker-secret'] || req.query.secret;
+  if (provided !== secret) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+}
+
 // Manual trigger for pipeline (for testing)
-app.post('/run', async (req, res) => {
+app.post('/run', workerAuth, async (req, res) => {
   await processJobs();
   res.json({ message: 'Pipeline run completed', lastRun: metrics.lastRun });
 });
 
 // Record Groq API usage (called by the main backend)
-app.post('/track-usage', express.json(), (req, res) => {
+app.post('/track-usage', express.json(), workerAuth, (req, res) => {
   const { tokens, error } = req.body;
   metrics.groqRequests++;
-  if (tokens) metrics.groqTokensUsed += tokens;
+  if (typeof tokens === 'number' && Number.isFinite(tokens) && tokens > 0) {
+    metrics.groqTokensUsed += tokens;
+  }
   if (error) metrics.groqErrors++;
   res.json({ received: true });
 });

@@ -22,13 +22,13 @@ try {
 const MODELS = {
     PRIMARY: 'llama-3.3-70b-versatile',    // Best quality — stories, novels
     FAST: 'llama-3.1-8b-instant',          // Fast — analysis, ideas, synopsis
-    LONG_CONTEXT: 'mixtral-8x7b-32768',    // 32k ctx — long-form improvement
+    LONG_CONTEXT: 'mistral-saba-24b',       // Mistral Saba — content improvement
 };
 
 const MODEL_DISPLAY_NAMES = {
     [MODELS.PRIMARY]: 'Llama 3.3 70B Versatile',
     [MODELS.FAST]: 'Llama 3.1 8B Instant',
-    [MODELS.LONG_CONTEXT]: 'Mixtral 8x7B 32K',
+    [MODELS.LONG_CONTEXT]: 'Mistral Saba 24B',
 };
 
 // ---------------------------------------------------------------------------
@@ -106,10 +106,11 @@ function buildSynopsisPrompt(content, genre, formatType) {
         `No quotes around the synopsis.\n\n${truncated}`;
 }
 
-function buildIdeasPrompt(genre, count = 5) {
+function buildIdeasPrompt(genre, count = 5, theme) {
+    const themeClause = theme ? ` around the theme "${theme}"` : '';
     return genre
-        ? `List ${count} original ${genre} story premises. One line each, numbered 1-${count}. No explanations.`
-        : `List ${count} original story premises across varied genres. One line each, numbered 1-${count}. No explanations.`;
+        ? `List ${count} original ${genre} story premises${themeClause}. One line each, numbered 1-${count}. No explanations.`
+        : `List ${count} original story premises across varied genres${themeClause}. One line each, numbered 1-${count}. No explanations.`;
 }
 
 function buildImprovementPrompt(content, focusArea) {
@@ -147,6 +148,9 @@ async function callGroq({ model, systemPrompt, userPrompt, maxTokens, temperatur
 
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+
             const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -163,7 +167,10 @@ async function callGroq({ model, systemPrompt, userPrompt, maxTokens, temperatur
                     temperature: temperature ?? 0.7,
                     top_p: 0.9,
                 }),
+                signal: controller.signal,
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 const errorBody = await response.text();
@@ -293,7 +300,7 @@ async function generateIdeas({ genre, count = 5, theme, apiKey }) {
     const result = await callGroq({
         model: MODELS.FAST,
         systemPrompt: SYSTEM_PROMPTS.ideas,
-        userPrompt: buildIdeasPrompt(genre, count),
+        userPrompt: buildIdeasPrompt(genre, count, theme),
         maxTokens: TOKEN_BUDGETS.ideas,
         temperature: 0.9,
         apiKey,

@@ -167,7 +167,7 @@ To run this project locally, you must set up your environment variables. Create 
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`     | **Required** | Supabase anonymous/public API key for client-side access.            |
 | `MONAD_RPC_URL`                     | **Required** | The RPC endpoint for interacting with the Monad Testnet.             |
 | `NEXT_PUBLIC_API_URL`               | **Required** | Backend API URL (e.g., `https://groqtales-backend-api.onrender.com`).|
-| `UNSPLASH_API_KEY`                  |  _Optional_  | API key used for fetching high-quality cover images for stories.     |
+| `NEXT_PUBLIC_UNSPLASH_API_KEY`          |  _Optional_  | API key used for fetching high-quality cover images for stories.     |
 | `NEXT_PUBLIC_CONTRACT_ADDR`         | **Required** | The smart contract address for the deployed NFT collection.          |
 | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | **Required** | WalletConnect project ID for wallet integration.                 |
 
@@ -305,7 +305,7 @@ graph TD
 
 - **Environment Variables:**
   - `GROQ_API_KEY` – Your Groq AI API key
-  - `UNSPLASH_API_KEY` – (Optional) for placeholder visuals
+  - `NEXT_PUBLIC_UNSPLASH_API_KEY` – (Optional) for placeholder visuals
   - `MONAD_RPC_URL` – Monad blockchain RPC endpoint
 
 - **Smart Contract Deployment:**

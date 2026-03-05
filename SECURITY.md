@@ -8,8 +8,8 @@ considered End of Security Support (EoSS).
 
 | Version | Status               | Support Level                 | Notes                               |
 | ------- | -------------------- | ----------------------------- | ----------------------------------- |
-| 1.3.101 | ✅ Active (Latest)   | Full (features + security)    | Current production release          |
-| 1.3.9   | ✅ Active (Previous) | Security & critical bug fixes | Upgrade recommended                 |
+| 1.3.104 | ✅ Active (Latest)   | Full (features + security)    | Current production release          |
+| 1.3.103 | ✅ Active (Previous) | Security & critical bug fixes | Upgrade recommended                 |
 | > 1.1.0 | ⚠️ Maintenance       | Critical security only        | Security maintenance — upgrade ASAP |
 | < 1.1.0 | ❌ EoSS              | No updates                    | Please upgrade immediately          |
 
@@ -118,6 +118,8 @@ still report it — include the upstream advisory if available.
 - Rate limiting and abuse detection for public endpoints
 - Content Security Policy headers via Helmet
 - Server-side rendering (SSR) safe patterns — no raw `document`/`window` access without guards
+- Worker endpoints protected by shared `WORKER_SECRET` for internal-only access
+- Outbound Groq API calls protected with 30-second `AbortController` timeout
 
 ## Current Technology Stack (Security-Relevant)
 

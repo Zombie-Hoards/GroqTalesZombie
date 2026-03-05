@@ -7,9 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Supported Versions
 
-Active full support: 1.3.101 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+Active full support: 1.3.104 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
 
-## [1.3.102] - Unreleased
+## [1.3.104] - 2026-03-05
+
+### Fixed
+- **Deprecated Groq Model**: Replaced `mixtral-8x7b-32768` with `mistral-saba-24b` in both `lib/groq-service.ts` (`GROQ_MODELS.CONTENT_IMPROVEMENT`) and `server/services/groqService.js` (`MODELS.LONG_CONTEXT`).
+- **Backend Test Lint**: Converted `forEach` expression-bodied arrow to block-bodied in `scripts/backend-test.js` (no implicit return).
+- **Backend Test Start Script**: Relaxed assertion to accept any `start*` script name (supports `start:backend`, `start-backend`, etc.).
+- **Test Fetch Leak**: Saved and restored `global.fetch` in `tests/backend/groq-service.test.js` via `afterAll` to prevent cross-test contamination.
+
+### Changed
+- **Groq Route Security** (`server/routes/groq.js`):
+  - `/models` now reads API key from `Authorization: Bearer …` header (query param kept as fallback).
+  - `ideas` action validates and clamps `count` to 1–20 range.
+  - Error responses no longer leak raw error messages; return generic `AI operation failed` with code.
+- **Groq Service Enhancements** (`server/services/groqService.js`):
+  - `buildIdeasPrompt` now incorporates the `theme` parameter.
+  - `callGroq` fetch calls protected by 30-second `AbortController` timeout.
+- **Worker Security** (`server/worker.js`):
+  - `/run` and `/track-usage` endpoints gated by `WORKER_SECRET` shared-secret auth.
+  - `tokens` payload validated as a finite positive number before accumulation.
+- **Backend Test**: Added `healthCheckPath: /healthz` assertion for Render config.
+
+### Documentation
+- **README.md**: Standardized `UNSPLASH_API_KEY` → `NEXT_PUBLIC_UNSPLASH_API_KEY` in env table and For Developers section.
+- **SECURITY.md**: Bumped latest version to 1.3.103→1.3.104, added worker secret and timeout notes.
+- **wiki/Backend-Testing.md**: Updated model list to include `mistral-saba-24b`.
+- **wiki/API-Documentation.md**: Corrected production base URL to `groqtales-backend-api.onrender.com/api`.
+
+## [1.3.103] - 2026-03-05
+
+### Fixed
+- **Cloudflare Pages Build Failure (`Invalid Version:`)**: Fixed `npm ci` crash caused by `@upstash/redis` having `"version": "v1.36.3"` in `package-lock.json`. The `v` prefix is not valid semver; npm 10.9.2 strictly validates version strings during `npm clean-install`, causing the build to exit with code 1. Corrected to `"1.36.3"`.
+
+### Changed
+- **ARCHITECTURE.md — Hybrid Database State**: Updated the Core Technologies section and added a "Data Layer — Transitional State" section documenting that MongoDB is still active for the NFT minting pipeline (`StoryMint` model via `lib/dbConnect.ts`). Includes a module-by-module audit table (live/stubbed/dead code), development guidance targeting Supabase for all new work, onboarding credentials, and a cleanup plan. Marked the document as transitional.
+
+## [1.3.102] - 2026-03-05
 
 ### Added
 - **Groq AI Centralized Service**: Introduced `/server/services/groqService.js` to handle all Groq API calls (LLaMA 3.3/3.1, Mixtral) with 70+ parameters schema, robust error handling, and timeout limits.

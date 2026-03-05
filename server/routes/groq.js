@@ -33,7 +33,8 @@ router.get('/models', async (req, res) => {
     try {
         // Connection test mode
         if (req.query.action === 'test') {
-            const apiKey = req.query.apiKey || undefined;
+            const authHeader = req.headers.authorization || '';
+            const apiKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : req.query.apiKey;
             const result = await groqService.testConnection(apiKey);
             return res.json(result);
         }
@@ -149,7 +150,9 @@ router.post('/', async (req, res) => {
 
             case 'ideas': {
                 const { genre, theme, count } = req.body;
-                result = await groqService.generateIdeas({ genre, count: count || 5, theme, apiKey });
+                const rawCount = parseInt(count, 10);
+                const safeCount = Number.isFinite(rawCount) ? Math.min(Math.max(rawCount, 1), 20) : 5;
+                result = await groqService.generateIdeas({ genre, theme, count: safeCount, apiKey });
                 return res.json({ result: result.content, tokensUsed: result.tokensUsed });
             }
 
@@ -167,7 +170,10 @@ router.post('/', async (req, res) => {
         }
     } catch (error) {
         console.error('Groq route error:', error);
-        res.status(500).json({ error: error.message || 'AI operation failed' });
+        return res.status(500).json({
+            error: 'AI operation failed',
+            code: 'GROQ_ERROR',
+        });
     }
 });
 

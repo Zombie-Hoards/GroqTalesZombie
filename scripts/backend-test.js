@@ -65,14 +65,20 @@ const requiredFiles = [
     'server/routes/ai.js', 'server/routes/stories.js', 'server/config/supabase.js',
     'render.yaml', '.env.example'
 ];
-requiredFiles.forEach(f => test('File exists: ' + f, () => assert(fs.existsSync(path.join(ROOT, f)), f + ' missing')));
+requiredFiles.forEach(f => {
+    test('File exists: ' + f, () => assert(fs.existsSync(path.join(ROOT, f)), f + ' missing'));
+});
 
 // ---------------------------------------------------------
 // 2. PACKAGE CONFIGURATION
 // ---------------------------------------------------------
 try {
     const pkg = JSON.parse(fs.readFileSync(path.join(SERVER, 'package.json'), 'utf-8'));
-    test('Package: has start script', () => assert(pkg.scripts && pkg.scripts.start, 'missing'));
+    test('Package: has start script', () => {
+        const scripts = pkg.scripts || {};
+        const hasStart = Object.keys(scripts).some(key => /^start($|[:_-])/.test(key));
+        assert(hasStart, 'missing start script (checked start, start:*, start-*, start_*)');
+    });
     test('Package: express dependency', () => assert(pkg.dependencies && pkg.dependencies.express, 'missing'));
     test('Package: supabase dependency', () => assert(pkg.dependencies && pkg.dependencies['@supabase/supabase-js'], 'missing'));
 } catch (e) {
@@ -87,6 +93,7 @@ try {
     test('Render API service defined', () => assert(ry.includes('groqtales-backend-api'), 'missing'));
     test('Render Worker service defined', () => assert(ry.includes('groqtales-worker'), 'missing'));
     test('Render GROQ_API_KEY environment', () => assert(ry.includes('GROQ_API_KEY'), 'missing'));
+    test('Render healthCheckPath: /healthz', () => assert(ry.includes('healthCheckPath:') && ry.includes('/healthz'), 'missing healthCheckPath: /healthz'));
 } catch (e) {
     test('Render Config exists', () => { throw new Error('Could not read render.yaml'); });
 }
@@ -98,7 +105,7 @@ try {
     const s = fs.readFileSync(path.join(SERVER, 'services/groqService.js'), 'utf-8');
     test('GroqService: uses llama-3.3-70b-versatile', () => assert(s.includes('llama-3.3-70b-versatile'), 'missing primary model'));
     test('GroqService: uses llama-3.1-8b-instant', () => assert(s.includes('llama-3.1-8b-instant'), 'missing fast model'));
-    test('GroqService: uses mixtral-8x7b-32768', () => assert(s.includes('mixtral-8x7b-32768'), 'missing long context model'));
+    test('GroqService: uses mistral-saba-24b', () => assert(s.includes('mistral-saba-24b'), 'missing long context model'));
     test('GroqService: no invalid fallback models', () => assert(!s.includes('llama3-8b-8192-analysis'), 'invalid model found'));
     test('GroqService: exports core functions', () => assert(
         s.includes('generate,') && s.includes('analyze,') && s.includes('generateSynopsis,'),

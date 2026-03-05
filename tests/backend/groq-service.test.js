@@ -21,6 +21,7 @@ jest.mock('../../server/utils/logger', () => ({
 }));
 
 // Mock fetch globally
+const originalFetch = global.fetch;
 const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
@@ -40,13 +41,17 @@ describe('Groq Service Module', () => {
         delete process.env.GROQ_API_KEY;
     });
 
+    afterAll(() => {
+        global.fetch = originalFetch;
+    });
+
     // ---------- Model Configuration ----------
 
     describe('Model Configuration', () => {
         test('exports valid Groq model identifiers', () => {
             expect(groqService.MODELS.PRIMARY).toBe('llama-3.3-70b-versatile');
             expect(groqService.MODELS.FAST).toBe('llama-3.1-8b-instant');
-            expect(groqService.MODELS.LONG_CONTEXT).toBe('mixtral-8x7b-32768');
+            expect(groqService.MODELS.LONG_CONTEXT).toBe('mistral-saba-24b');
         });
 
         test('exports display names for all models', () => {

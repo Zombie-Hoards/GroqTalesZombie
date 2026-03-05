@@ -50,7 +50,7 @@ export interface StoryRecommendation {
 export const GROQ_MODELS = {
   STORY_GENERATION: 'llama-3.3-70b-versatile',
   STORY_ANALYSIS: 'llama-3.1-8b-instant',
-  CONTENT_IMPROVEMENT: 'mixtral-8x7b-32768',
+  CONTENT_IMPROVEMENT: 'mistral-saba-24b',
   RECOMMENDATIONS: 'llama-3.1-8b-instant',
 } as const;
 

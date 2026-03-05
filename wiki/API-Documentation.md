@@ -82,7 +82,7 @@ http://localhost:3000/api
 For production (when available):
 
 ```
-https://groqtales.com/api
+https://groqtales-backend-api.onrender.com/api
 ```
 
 Check the latest repository updates or announcements for the official production API URL once
