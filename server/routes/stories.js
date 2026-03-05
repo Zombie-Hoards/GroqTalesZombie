@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const { supabaseAdmin } = require('../config/supabase');
 const { authRequired } = require('../middleware/auth');
+const groqService = require('../services/groqService');
 
 /**
  * @swagger
@@ -373,19 +374,41 @@ router.get('/search/:id', async (req, res) => {
  */
 router.post('/generate', authRequired, async (req, res) => {
   try {
-    const { prompt, genre, length, style } = req.body;
+    const { prompt, genre, length, style, theme, characters, setting, formatType } = req.body;
 
-    // Placeholder implementation
+    if (!prompt && !theme) {
+      return res.status(400).json({ error: 'prompt or theme is required' });
+    }
+
+    const result = await groqService.generate({
+      prompt,
+      genre,
+      theme,
+      length: length || 'medium',
+      tone: style,
+      characters,
+      setting,
+      formatType: formatType || 'story',
+    });
+
     const generatedStory = {
       id: require('crypto').randomUUID(),
-      title: 'AI Generated Story',
-      content: 'Generated story content based on prompt...',
+      title: `AI Generated ${(formatType || 'Story').charAt(0).toUpperCase() + (formatType || 'story').slice(1)}`,
+      content: result.content,
       genre,
-      metadata: { prompt, length, style, generatedAt: new Date().toISOString() },
+      metadata: {
+        prompt,
+        length,
+        style,
+        model: result.model,
+        tokensUsed: result.tokensUsed,
+        generatedAt: new Date().toISOString(),
+      },
     };
 
     return res.json(generatedStory);
   } catch (error) {
+    console.error('Story generation error:', error);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -417,17 +440,27 @@ router.post('/:id/analyze', authRequired, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const analysis = {
-      storyId: id,
-      sentiment: 'positive',
-      themes: ['adventure', 'friendship'],
-      readabilityScore: 8.5,
-      wordCount: 1500,
-      analyzedAt: new Date().toISOString(),
-    };
+    // Fetch story content from database
+    const { data: story, error: fetchError } = await supabaseAdmin
+      .from('stories')
+      .select('content, title, genre')
+      .eq('id', id)
+      .single();
 
-    return res.json(analysis);
+    if (fetchError || !story) {
+      return res.status(404).json({ error: 'Story not found' });
+    }
+
+    const result = await groqService.analyze({ content: story.content });
+
+    return res.json({
+      storyId: id,
+      ...result.content,
+      tokensUsed: result.tokensUsed,
+      analyzedAt: new Date().toISOString(),
+    });
   } catch (error) {
+    console.error('Story analysis error:', error);
     return res.status(500).json({ error: error.message });
   }
 });
@@ -599,34 +632,14 @@ router.post('/upload-file', authRequired, fileUploadOptions.fields([{ name: 'fil
     if (previewText.length > 50) {
       if (process.env.GROQ_API_KEY) {
         try {
-          const fetch = require('node-fetch'); // Use global fetch if node > 18, but require is safe if node-fetch is needed for older node
-          const groqResponse = await (global.fetch ? global.fetch : require('axios').post)('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: "mixtral-8x7b-32768",
-              messages: [
-                { role: "system", content: "You are an expert story reviewer and blurb writer." },
-                { role: "user", content: `Please write a compelling 2-3 sentence synopsis for this ${formatType} (Genre: ${genre}). The beginning of the text is:\n\n${previewText}` }
-              ],
-              max_tokens: 150
-            })
+          const synopsisResult = await groqService.generateSynopsis({
+            content: previewText,
+            genre,
+            formatType,
           });
-
-          let groqData;
-          if (groqResponse.json) {
-            groqData = await groqResponse.json();
-          } else {
-            groqData = groqResponse.data; // fallback for axios
-          }
-          if (groqData.choices && groqData.choices[0]) {
-            synopsis = groqData.choices[0].message.content.trim();
-          }
+          synopsis = synopsisResult.content;
         } catch (groqErr) {
-          console.error("Groq AI Error:", groqErr);
+          console.error('Groq AI Synopsis Error:', groqErr);
           synopsis = `An engaging ${formatType} set in the ${genre} genre. The opening reveals a captivating narrative starting with: "${previewText.substring(0, 100).replace(/\n/g, ' ')}...".`;
         }
       } else {

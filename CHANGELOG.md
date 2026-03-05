@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Active full support: 1.3.101 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
 
+## [1.3.102] - Unreleased
+
+### Added
+- **Groq AI Centralized Service**: Introduced `/server/services/groqService.js` to handle all Groq API calls (LLaMA 3.3/3.1, Mixtral) with 70+ parameters schema, robust error handling, and timeout limits.
+- **Groq Multiplexer Route**: Created `server/routes/groq.js` for flexible `/api/groq` requests matching the frontend `use-groq` hook exactly.
+- **Backend Worker Pipelines**: Implemented `server/worker.js` with functional ML analytics, background cleanup jobs, and metrics tracing.
+- **Automated Render Deployment Test**: Wrote `/scripts/backend-test.js` (`npm run test:backend`) to assert standard deployment structures, missing modules, package settings, and placeholder eliminations are completed securely.
+- **Documentation**: Updated `README.md`, `API-Documentation.md`, `AI-Prompt-Engineering.md`, and `Backend-Testing.md` to reflect full Groq backend operations.
+- **Swagger Updates**: Restructured and exposed endpoints across the backend properly replacing placeholder returns in `server/routes/stories.js` and `server/routes/ai.js`.
+
+### Fixed
+- **Render Health Check Flapping (429 Errors)**: Resolved an issue where Render liveness probes flap between "failed" and "recovered" due to HTTP 429 Too Many Requests.
+  - Added dedicated `/healthz` endpoints at the top of `backend.js` and `sdk-server.js` to ensure instantaneous, dependency-free responses.
+  - Safelisted `/healthz`, `/`, and `/api/health` in the global `express-rate-limit` configuration to guarantee liveness probes are never blocked.
+  - Updated `render.yaml` `healthCheckPath` from `/api/health` and `/sdk/health` to the isolated `/healthz` endpoint.
+  - Added explicit logging to `/healthz` requests for easier production debugging.
+- **Winston Crash Loop**: Designed fallback console logging for `groqService` execution in scenarios where `winston` modules suffer disk access issues.
+- **Module Resolution Issues**: Corrected EPERM/Lusca errors across testing infrastructure by designing standalone tester bypassing standard tree constraints.
+- **Model Namings**: Cleansed the frontend and backend of deprecated Groq mock-model nomenclature (e.g. `llama3-8b-8192-analysis`) ensuring legitimate tokens execute successfully.
+
 ## [1.3.101] - 2026-03-03
 
 ### Added

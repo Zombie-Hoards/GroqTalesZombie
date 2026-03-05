@@ -28,7 +28,7 @@ extensibility.
 - **Frontend**: Next.js 14 with App Router, React 18, TypeScript
 - **Styling**: Tailwind CSS, shadcn/ui components
 - **Backend**: Next.js API Routes, Node.js runtime
-- **Database**: MongoDB with Mongoose ODM
+- **Database**: Supabase PostgreSQL with Row Level Security
 - **Blockchain**: Monad SDK, Solidity Smart Contracts
 - **AI**: Groq API for story generation
 - **Deployment**: Cloudflare Pages with edge network optimization
@@ -66,7 +66,7 @@ graph TB
     end
 
     subgraph "Data Layer"
-        DB --> MongoDB[(MongoDB)]
+        DB --> Supabase[(Supabase PostgreSQL)]
         DB --> Models[Data Models]
         DB --> Queries[Query Layer]
     end
@@ -167,7 +167,7 @@ graph TB
         AIService[AI Service]
     end
 
-    Database --> MongoDB[(MongoDB)]
+    Database --> Supabase[(Supabase PostgreSQL)]
     External --> GroqAPI[Groq AI API]
     External --> BlockchainAPI[Blockchain API]
 
@@ -464,7 +464,7 @@ graph TB
     end
 
     subgraph "Data Layer"
-        MongoDB[(MongoDB Atlas)]
+        Supabase[(Supabase PostgreSQL)]
         Redis[(Redis Cache)]
         IPFS[(IPFS Storage)]
     end
@@ -490,7 +490,7 @@ graph TB
     Middleware --> NFTService
     Middleware --> AIService
 
-    StoryService --> MongoDB
+    StoryService --> Supabase
     AuthService --> Redis
     NFTService --> IPFS
 
@@ -748,7 +748,7 @@ graph LR
 graph TB
     subgraph "Development Environment"
         DevLocal[Local Development]
-        DevDB[Local MongoDB]
+        DevDB[Local Supabase]
         DevAPI[Development APIs]
     end
 

@@ -52,7 +52,8 @@
     "start:worker": "node server/worker.js",
     "backend:dev": "nodemon server/backend.js",
     "backend:test": "node server/backend.js",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "test:backend": "node scripts/backend-test.js"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.1",

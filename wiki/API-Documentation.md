@@ -93,44 +93,139 @@ deployed.
 Below are the primary categories of API endpoints that GroqTales plans to support. Detailed
 specifications for each endpoint will be added as they are implemented.
 
-### Story Generation
+### Groq AI Service
 
-Endpoints for generating AI-powered stories. These interact with Groq AI or other integrated models.
+Endpoints for interacting directly with the centralized Groq AI service.
 
-- **Generate Story** (POST `/stories/generate`)
-  - **Description**: Generate a story based on provided parameters like genre, title, and prompt.
-  - **Request Body** (example):
-
+- **Check Available Models** (GET `/api/groq/models`)
+  - **Description**: Returns all recognized Groq models and their token budgets.
+  - **Query Params**: `?action=test` (optional) validates API credentials.
+  - **Response** (example):
     ```json
     {
-      "title": "The Lost Kingdom",
-      "genres": ["fantasy", "adventure"],
-      "overview": "A knight seeks to reclaim his lost kingdom.",
-      "storyType": "text",
-      "mainCharacters": "Sir Eldric, a brave knight; Lila, a witty rogue",
-      "setting": "Medieval fantasy world",
-      "plotOutline": "Overcome a dark sorcerer to reclaim the throne",
-      "themes": "Courage and redemption",
-      "additionalInstructions": "Include a plot twist",
-      "temperature": 0.7
+      "models": { "PRIMARY": "llama-3.3-70b-versatile" },
+      "default": "llama-3.3-70b-versatile",
+      "tokenBudgets": { "short": 800 }
     }
     ```
 
+- **Groq Multiplex Action** (POST `/api/groq`)
+  - **Description**: Primary interface for story, ideas, analysis, or improvement generation.
+  - **Request Body** (example for analysis):
+    ```json
+    {
+      "action": "analyze",
+      "content": "Story text..."
+    }
+    ```
   - **Response** (example):
+    ```json
+    {
+      "result": { "sentiment": "positive", "genres": ["fantasy"] },
+      "model": "llama-3.1-8b-instant",
+      "tokensUsed": { "total": 120 }
+    }
+    ```
+
+### Story Generation
+
+Endpoints for generating AI-powered stories using the Groq AI backend. They interact with `groqService` using a structured prompt
+engineering system with **70+ configurable parameters**. See the
+[AI Prompt Engineering](AI-Prompt-Engineering.md) wiki page for the full parameter reference.
+
+- **Generate Story** (POST `/api/v1/stories/generate`)
+  - **Description**: Generate a story based on provided parameters using `llama-3.3-70b-versatile`.
+  - **Request Body** (example — all fields except `genre` are optional):
 
     ```json
     {
-      "id": "story-12345",
-      "title": "The Lost Kingdom",
-      "content": "Once upon a time, in a land far away...",
-      "genre": "fantasy, adventure",
-      "createdAt": "2023-10-01T12:00:00Z",
-      "status": "generated"
+      "title": "The Last Signal",
+      "genre": "Science Fiction",
+      "subgenre": "Cyberpunk",
+      "target_format": "story_and_comic",
+      "word_count_target": 2500,
+      "main_characters": [
+        {
+          "name": "Kai",
+          "age": 28,
+          "role": "Protagonist",
+          "traits": ["resourceful", "haunted"],
+          "background": "former corporate hacker"
+        }
+      ],
+      "central_conflict": "A hacker discovers a sentient AI trapped in a server farm",
+      "atmosphere": "noir",
+      "tone": "tense and suspenseful",
+      "ending_type": "bittersweet",
+      "violence_level": "moderate",
+      "romance_level": "none",
+      "language_level": "mild profanity",
+      "forbidden_content": "no sexual content involving minors",
+      "creativity_level": "high",
+      "comic_panel_count_target": 8
+    }
+    ```
+
+  - **Response** (structured JSON):
+
+    ```json
+    {
+      "title": "The Last Signal",
+      "genre": "Science Fiction",
+      "wordCountApprox": 2480,
+      "summary": "A former hacker discovers a sentient AI...",
+      "chapters": [
+        {
+          "chapterNumber": 1,
+          "chapterTitle": "Ghost in the Grid",
+          "chapterSummary": "Kai breaks into NovaCorp...",
+          "text": "The rain fell sideways through the neon haze..."
+        }
+      ],
+      "characters": [
+        {
+          "name": "Kai",
+          "role": "Protagonist",
+          "shortDescription": "A haunted ex-hacker seeking redemption",
+          "arcSummary": "Moves from self-preservation to self-sacrifice"
+        }
+      ],
+      "themes": {
+        "primary": ["consciousness", "freedom"],
+        "secondary": ["corporate exploitation"]
+      },
+      "contentWarnings": ["moderate violence"],
+      "styleNotes": {
+        "tone": "tense and suspenseful",
+        "voice": "close third person",
+        "pacing": "fast-paced"
+      },
+      "comicScript": {
+        "enabled": true,
+        "panels": [
+          {
+            "panelNumber": 1,
+            "pageNumber": 1,
+            "location": "Server wing — abandoned floor",
+            "time": "Night",
+            "visualDescription": "Wide shot: Kai crouches at a window...",
+            "charactersPresent": ["Kai"],
+            "dialogue": [],
+            "caption": "Some doors are easier to break into than out of.",
+            "emotionalBeat": "Isolation, tension"
+          }
+        ]
+      },
+      "nftMetadata": {
+        "shortBlurb": "A former hacker finds something alive in the servers...",
+        "tags": ["cyberpunk", "AI", "noir"],
+        "recommendedMintEditionSize": 50
+      }
     }
     ```
 
   - **Headers**: `Authorization: Bearer YOUR_API_KEY`
-  - **Status**: Planned/In Development
+  - **Status**: Active
 
 ### NFT Minting
 
