@@ -12,6 +12,9 @@ Active full support: 1.4.0 (latest). Security maintenance (critical fixes only):
 ## [1.4.0] - 2026-03-07
 
 ### Added
+- **Web3 CRAFTS Purchase Page** (`app/buy/CRAFTS/page.tsx`): Built a premium token purchase marketplace interface bridging Fiat constraints into Web3 interactions.
+  - Implemented 4 pricing tiers (Starter, Pro Creator, Elite Stack, Studio Master) with localized INR conversion alongside standard USD base ($1 = ₹85 baseline, 30+5 tier logic).
+  - Enforced authentication via NextAuth (`useSession`) and Ethereum Web3 Wallet connection (`useWeb3`), handling connection prompts directly via UI alerts.
 - **Panelra Engine — Sketch-Based Comic Generation** (`app/create/comic/page.tsx`) [REWRITE]: Complete 3-column studio layout for AI comic creation:
   - **Left Panel — Character & Story Setup**: Hero sketch upload with drag-drop + preview, name/description fields. Dynamic co-star section (add/remove with image, name, traits). Story basics with title, logline, dual genre pills (up to 2 from 10 options), and art style selector (Manga, Western, Minimalist, Noir, Watercolor, Pixel Art).
   - **Middle Panel — Layout & Structure**: Pages/panels-per-page selectors, layout style picker (Classic Grid, Cinematic, Hero Shots) with visual descriptions, beat outline with 4 slots (Intro/Conflict/Climax/Resolution).

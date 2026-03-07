@@ -116,6 +116,7 @@ export function Header() {
     { type: 'link', href: '/genres', label: 'Worlds' },
     { type: 'link', href: '/create', label: 'Forge' },
     { type: 'link', href: '/marketplace', label: 'Bazaar' },
+    { type: 'link', href: '/buy/CRAFTS', label: 'Get CRAFTS' },
     { type: 'link', href: '/community', label: 'Commons' },
     { type: 'link', href: '/docs', label: 'Atlas' },
     ...(account

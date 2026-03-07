@@ -119,6 +119,7 @@ export function Footer({ version }: { version?: string }) {
                   { href: '/genres', label: 'Worlds' },
                   { href: '/create', label: 'Forge' },
                   { href: '/marketplace', label: 'Bazaar' },
+                  { href: '/buy/CRAFTS', label: 'Buy CRAFTS' },
                   { href: '/community', label: 'Commons' },
                   { href: '/docs', label: 'Atlas' },
                   { href: '/community/creators', label: 'Top Creators' },
