@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import BookView from '@/components/book-view';
 import { ArrowLeft, BookOpen, Eye, Heart, Loader2, Tag } from 'lucide-react';
 import Link from 'next/link';
@@ -47,7 +46,6 @@ export default function StoryClient({ id }: { id: string }) {
   const [story, setStory] = useState<Story | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
     let cancelled = false;
@@ -55,18 +53,16 @@ export default function StoryClient({ id }: { id: string }) {
     async function fetchStory() {
       setNotFound(false);
       setLoading(true);
-      const { data, error } = await supabase
-        .from('stories')
-        .select('id, title, genre, author_name, views, likes, content, cover_image, description, parameters')
-        .eq('id', id)
-        .maybeSingle();
-
-      if (cancelled) return;
-
-      if (error || !data) {
-        setNotFound(true);
-      } else {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+        const res = await fetch(`${baseUrl}/api/v1/stories/${id}`);
+        if (!res.ok) throw new Error('Story not found');
+        const data = await res.json();
+        if (cancelled) return;
         setStory(data);
+      } catch {
+        if (cancelled) return;
+        setNotFound(true);
       }
       setLoading(false);
     }
@@ -75,7 +71,7 @@ export default function StoryClient({ id }: { id: string }) {
     return () => {
       cancelled = true;
     };
-  }, [id, supabase]);
+  }, [id]);
 
   if (loading) {
     return (

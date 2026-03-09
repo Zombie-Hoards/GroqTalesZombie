@@ -596,7 +596,9 @@ app.use(loggingMiddleware);
 app.use('/api/v1/auth', require('./routes/auth'));
 app.use('/api/v1/stories', require('./routes/stories'));
 app.use('/api/v1/comics', require('./routes/comics'));
+app.use('/api/v1/nft/eth-mainnet', require('./routes/nft-eth-mainnet'));
 app.use('/api/v1/nft', require('./routes/nft'));
+app.use('/api/v1/eth-mainnet', require('./routes/eth-mainnet'));
 app.use('/api/v1/wallets', require('./routes/wallets'));
 app.use('/api/v1/marketplace', require('./routes/marketplace'));
 app.use('/api/v1/users', require('./routes/users'));
@@ -617,6 +619,38 @@ app.use('/api/v1/settings/notifications', require('./routes/settings/notificatio
 app.use('/api/v1/settings/privacy', require('./routes/settings/privacy'));
 app.use('/api/v1/settings/wallet', require('./routes/settings/wallet'));
 app.use('/api/v1/settings/profile', require('./routes/settings/profile'));
+
+// Dashboard endpoint — aggregated user metrics
+const { authRequired: dashAuthRequired } = require('./middleware/auth');
+const { supabaseAdmin: dashSupabase } = require('./config/supabase');
+
+app.get('/api/v1/dashboard', dashAuthRequired, async (req, res) => {
+  try {
+    if (!dashSupabase) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
+
+    const userId = req.user.id;
+
+    // Parallel queries for dashboard data
+    const [storiesResult, draftsResult, publishedResult, recentResult] = await Promise.all([
+      dashSupabase.from('stories').select('id', { count: 'exact', head: true }).eq('author_id', userId),
+      dashSupabase.from('drafts').select('draft_key', { count: 'exact', head: true }).eq('owner_id', userId),
+      dashSupabase.from('stories').select('id', { count: 'exact', head: true }).eq('author_id', userId).eq('status', 'published'),
+      dashSupabase.from('stories').select('id, title, genre, likes_count, views, cover_image, created_at, status, is_minted').eq('author_id', userId).order('created_at', { ascending: false }).limit(5),
+    ]);
+
+    return res.json({
+      totalStories: storiesResult.count || 0,
+      totalDrafts: draftsResult.count || 0,
+      totalPublished: publishedResult.count || 0,
+      recentStories: recentResult.data || [],
+    });
+  } catch (error) {
+    console.error('Dashboard error:', error);
+    return res.status(500).json({ error: 'Failed to load dashboard data' });
+  }
+});
 
 // Vector Search Routes
 app.use('/api/vector', require('./routes/vector-search'));

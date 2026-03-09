@@ -10,7 +10,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import React, { useState, useEffect, useCallback, useRef, useMemo, Suspense } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { NftMintModal } from '@/components/nft-mint-modal';
-import { createClient } from '@/lib/supabase/client';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -120,7 +119,6 @@ function PublishStoryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const supabase = useMemo(() => createClient(), []);
 
   const draftKey = searchParams.get('draftKey') || '';
 
@@ -152,21 +150,21 @@ function PublishStoryContent() {
 
   useEffect(() => {
     async function fetchProfile() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('first_name, last_name, username')
-          .eq('id', session.user.id)
-          .single();
-        if (profile) {
-          const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ');
-          setPublisherName(name || profile.username || 'Creator');
-        }
-      }
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (!token) return;
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+        const res = await fetch(`${baseUrl}/api/v1/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const name = [data.firstName, data.lastName].filter(Boolean).join(' ');
+        setPublisherName(name || data.username || 'Creator');
+      } catch {}
     }
     fetchProfile();
-  }, [supabase]);
+  }, []);
 
   // ── Load Story Data ──────────────────────────────────────────────
 

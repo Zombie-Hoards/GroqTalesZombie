@@ -1,37 +1,35 @@
-import { createClient } from '@/lib/supabase/client'
+/**
+ * Auth actions — Backend API (BFF pattern)
+ * Routes authentication through the backend API instead of calling Supabase directly.
+ */
 
 export async function loginWithUsernameOrEmail(identifier: string, password: string) {
-    const supabase = createClient();
-    let loginEmail = identifier;
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-
     try {
-        // Determine the email if a username is provided
-        if (!isEmail) {
-            const { data, error: lookupError } = await supabase
-                .from('profiles')
-                .select('email')
-                .eq('username', identifier)
-                .single();
-
-            if (lookupError || !data?.email) {
-                // Return a generic error to prevent username/email enumeration
-                return { error: 'Invalid login credentials.' };
-            }
-            loginEmail = data.email;
-        }
-
-        // Perform the sign in securely
-        const { error } = await supabase.auth.signInWithPassword({
-            email: loginEmail,
-            password,
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+        const res = await fetch(`${baseUrl}/api/v1/auth/login-username`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier, password }),
         });
 
-        if (error) {
-            return { error: 'Invalid login credentials.' };
+        if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            return { error: data.error || 'Invalid login credentials.' };
         }
 
-        return { success: true };
+        const data = await res.json();
+
+        // Store tokens for subsequent API calls
+        if (data.data?.tokens?.accessToken) {
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('accessToken', data.data.tokens.accessToken);
+                if (data.data.tokens.refreshToken) {
+                    localStorage.setItem('refreshToken', data.data.tokens.refreshToken);
+                }
+            }
+        }
+
+        return { success: true, data: data.data };
     } catch (err) {
         return { error: 'An unexpected error occurred during login.' };
     }

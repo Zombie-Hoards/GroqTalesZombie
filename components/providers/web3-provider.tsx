@@ -43,12 +43,20 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
 
   const disconnectWallet = useCallback(async()=>{
     try{
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com'}/api/v1/settings/wallet`,{
         method: "DELETE",
-        credentials: "include",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
     } catch(err){
       console.error("Failed to disconnect wallet on server:", err);
+    }
+    // Clear auth tokens on disconnect
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
     }
     setAccount(null);
     setChainId(null);
@@ -109,15 +117,16 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
     if(!ethereum){
       setShowInstallModal(true);
       return;
-      //setConnecting(true);
     }
+      setConnecting(true);
       try {
-        //const ethereum = window.ethereum;
-
         const accounts:string[]= await ethereum.request({
           method: 'eth_requestAccounts',
         });
-        if(!accounts || accounts.length === 0) return;
+        if(!accounts || accounts.length === 0) {
+          setConnecting(false);
+          return;
+        }
         const selectedAccount = accounts[0]!;
         const chainIdHex = await ethereum.request({
           method: 'eth_chainId',
@@ -126,21 +135,53 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
           method: 'eth_getBalance',
           params: [selectedAccount, "latest"],
         });
-        //const chainIdNum = parseInt(chainIdHex, 16);
-        //const balanceBigInt = BigInt(balanceWei);
         const balanceEth = Number(BigInt(balanceWei))/ 1e18;
         setAccount(selectedAccount);
-        //setChainId(chainIdNum);
         setBalance(balanceEth.toFixed(4));
         setConnected(true);
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com'}/api/v1/settings/wallet`,{
+
+        // Authenticate via backend wallet-login endpoint (BFF pattern)
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+        try {
+          const authRes = await fetch(`${baseUrl}/api/v1/auth/wallet-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: selectedAccount }),
+          });
+
+          if (authRes.ok) {
+            const authData = await authRes.json();
+            // Store tokens for authenticated API calls
+            if (authData.data?.tokens?.accessToken && typeof window !== 'undefined') {
+              localStorage.setItem('accessToken', authData.data.tokens.accessToken);
+              if (authData.data?.tokens?.refreshToken) {
+                localStorage.setItem('refreshToken', authData.data.tokens.refreshToken);
+              }
+              // Dispatch storage event so other components (e.g. use-user-role) react
+              window.dispatchEvent(new StorageEvent('storage', { key: 'accessToken' }));
+            }
+          } else {
+            console.warn('Wallet auth failed, continuing with wallet-only connection');
+          }
+        } catch (authErr) {
+          console.warn('Wallet auth request failed:', authErr instanceof Error ? authErr.message : String(authErr));
+        }
+
+        // Also sync wallet address to settings
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        await fetch(`${baseUrl}/api/v1/settings/wallet`,{
           method: "PUT",
-          headers: {"Content-Type":"application/json"},
-          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({address: selectedAccount}),
         });
       } catch (error) {
-        console.error('Wallet connection failed:', error);
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error('Wallet connection failed:', msg);
+      } finally {
+        setConnecting(false);
       }
   };
 

@@ -7,7 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Supported Versions
 
-Active full support: 1.8.3 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+Active full support: 1.9.0 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+
+## [1.9.0] - 2026-03-09
+
+### Added
+
+- **`POST /api/v1/auth/wallet-login`** (`server/routes/auth.js`): New endpoint for wallet-based authentication — auto-creates Supabase user on first connect, returns access + refresh tokens, and creates a profile entry.
+- **`POST /api/v1/auth/login-username`** (`server/routes/auth.js`): New endpoint that looks up email from username in profiles table, then authenticates via Supabase — enables login by username or email.
+- **`GET /api/v1/auth/me`** (`server/routes/auth.js`): Returns the current authenticated user's profile from Supabase, including display name, avatar, bio, role, and wallet address.
+- **`GET /api/v1/dashboard`** (`server/backend.js`): Aggregated dashboard endpoint returning total stories, drafts, published count, and 5 most recent stories for the authenticated user.
+- **`GET /api/v1/stories/:id`** (`server/routes/stories.js`): Alias route that fetches a single story by ID with author profile join and view count increment — enables BFF-consistent story fetching.
+
+### Changed
+
+- **Backend Hardening** (`server/routes/stories.js`, `server/routes/drafts.js`): Added `supabaseAdmin` null guards to **all** route handlers (8 story routes, 5 draft routes) to return `503 Database not configured` instead of crashing with unhandled null reference errors when `SUPABASE_SERVICE_ROLE_KEY` is missing in production.
+- **BFF Refactor — Story Detail** (`app/stories/[id]/client.tsx`): Replaced direct Supabase `.from('stories').select()` query with `fetch` to backend `GET /api/v1/stories/:id`. Removed `createClient` import.
+- **BFF Refactor — Community Feed** (`components/community-feed.tsx`): Replaced direct Supabase `.from('profiles')` call with `fetch` to `GET /api/v1/auth/me` using stored access token. Removed `createClient` import.
+- **BFF Refactor — Publish Page** (`app/profile/story/publish/page.tsx`): Replaced Supabase session/profile fetch with `GET /api/v1/auth/me` using localStorage token. Removed `createClient` import.
+- **BFF Refactor — Profile Form** (`components/settings/profile-form.tsx`): Removed all direct Supabase calls (`auth.updateUser`, `from('profiles').upsert`). Profile load/save now exclusively uses backend `GET/PATCH /api/v1/settings/profile`. Removed `createClient` import.
+- **BFF Refactor — Auth Actions** (`app/actions/auth.ts`): Replaced direct Supabase username lookup with backend `POST /api/v1/auth/login-username`. Stores tokens in localStorage.
+- **BFF Refactor — User Role Hook** (`hooks/use-user-role.ts`): Replaced Supabase `onAuthStateChange` listener with `GET /api/v1/auth/me` call using stored token. Listens for `storage` events to react to login/logout.
+- **Wallet Auth Flow** (`components/providers/web3-provider.tsx`): After `eth_requestAccounts`, now calls `POST /api/v1/auth/wallet-login`, stores returned tokens in localStorage, and dispatches `StorageEvent` for cross-component reactivity. Disconnect clears tokens. Replaced `credentials: "include"` with `Authorization: Bearer` header pattern.
+
+### Fixed
+
+- **Backend 500/503 Errors**: All story and draft routes now gracefully handle missing `supabaseAdmin` instead of crashing.
+- **"Authentication service not configured"**: Backend auth middleware already returned 503 for missing Supabase; now all downstream routes also guard against it.
+- **Wallet Connection Never Completing**: `web3-provider.tsx` now creates a full Supabase auth session via wallet-login, stores tokens, and sets `connecting` state properly.
+- **Profile Form Crashing**: Removed references to `sessionUser` state variable that was deleted during refactor.
+- **Frontend Supabase Violations**: Eliminated all remaining direct-to-Supabase calls from the frontend, enforcing the BFF architecture.
+
+### Security
+
+- All frontend authentication now uses `Authorization: Bearer <token>` headers with tokens stored in localStorage. No direct Supabase client interaction from the browser.
+- Wallet login uses deterministic password derived from wallet address + server JWT secret — never transmitted to client.
 
 ## [1.8.3] - 2026-03-09
 

@@ -115,6 +115,9 @@ function serializeDraft(draft) {
  */
 router.get('/', authRequired, async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const { draftKey } = req.query;
     if (!draftKey || typeof draftKey !== 'string') {
       return res.status(400).json({ error: 'draftKey is required' });
@@ -181,6 +184,9 @@ router.get('/', authRequired, async (req, res) => {
  */
 router.put('/', authRequired, async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const {
       draftKey, storyType = 'text', storyFormat = 'free',
       ownerWallet, ownerRole = 'wallet',
@@ -329,6 +335,9 @@ router.put('/', authRequired, async (req, res) => {
  */
 router.patch('/', authRequired, async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const { draftKey, versionId, maxVersions } = req.body || {};
     if (!draftKey) return res.status(400).json({ error: 'draftKey is required' });
     if (!versionId) return res.status(400).json({ error: 'versionId is required' });
@@ -418,6 +427,9 @@ router.patch('/', authRequired, async (req, res) => {
  */
 router.delete('/', authRequired, async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const { draftKey } = req.query;
     if (!draftKey) return res.status(400).json({ error: 'draftKey is required' });
 
@@ -442,6 +454,9 @@ router.delete('/', authRequired, async (req, res) => {
  */
 router.get('/list', authRequired, async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const { limit = 20, storyType } = req.query;
 
     let safeLimit = parseInt(String(limit), 10);

@@ -117,31 +117,36 @@ export function NftMintModal({
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
 
     try {
-      const res = await fetch(`${baseUrl}/api/v1/nft/mint-request`, {
+      // Small helper to get active account if not injected
+      let activeAccount = '';
+      if (typeof window.ethereum !== 'undefined') {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        activeAccount = accounts?.[0] || '';
+        if (!activeAccount) {
+            throw new Error('Please connect your MetaMask wallet first to mint natively.');
+        }
+      } else {
+        throw new Error('MetaMask is not installed. Native minting requires a wallet.');
+      }
+
+      const res = await fetch(`${baseUrl}/api/v1/nft/eth-mainnet/mint`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          storyId,
-          nftName: nftName.trim(),
-          nftDescription: nftDescription.trim(),
-          coverImageUrl,
-          feeAmount,
-          feeCurrency,
-          supply,
-          royaltyPercentage,
-          metadata: { tags, genres },
+          toAddress: activeAccount,
+          tokenUri: coverImageUrl || 'ipfs://placeholder-token-uri',
         }),
       });
 
       if (res.ok) {
         setStep('success');
-        toast({ title: '🎉 Mint request submitted!', description: 'Your request is now under admin review.' });
+        toast({ title: '🎉 NFT Minted!', description: 'Your story has been permanently stored on Ethereum Mainnet.' });
       } else {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to submit mint request');
+        throw new Error(err.error || 'Failed to mint NFT');
       }
     } catch (error) {
       toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' });
@@ -370,9 +375,9 @@ export function NftMintModal({
                 <CheckCircle2 className="w-10 h-10 text-emerald-400" />
               </motion.div>
               <div>
-                <h2 id="mint-modal-title" className="text-xl font-bold text-white mb-1">Request Submitted!</h2>
+                <h2 id="mint-modal-title" className="text-xl font-bold text-white mb-1">Minting Successful!</h2>
                 <p id="mint-modal-desc" className="text-sm text-white/50">
-                  Your NFT mint request is now under admin review. You'll be notified once it's approved.
+                  Your NFT has been successfully minted on Ethereum Mainnet. It may take a few moments for the transaction to confirm and appear in your portfolio.
                 </p>
               </div>
               <button
