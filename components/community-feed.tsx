@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase/client';
 
 interface CommunityPost {
   id: string; author: { id: string; name: string; avatar: string; verified?: boolean; level: number; };
@@ -114,15 +113,19 @@ export default function CommunityFeed() {
   const [filter, setFilter] = useState<'all' | 'stories' | 'discussions'>('all');
   const [profile, setProfile] = useState<any>(null);
   const { toast } = useToast();
-  const supabase = React.useMemo(() => createClient(), []);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        supabase.from('profiles').select('*').eq('id', session.user.id).single()
-          .then(({ data }) => setProfile(data || session.user));
-      }
-    });
+    // Fetch user profile from backend API (BFF pattern)
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token) {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+      fetch(`${baseUrl}/api/v1/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setProfile(data); })
+        .catch(() => {});
+    }
 
     fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com'}/api/v1/stories?limit=20`)
       .then(r => {

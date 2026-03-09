@@ -67,6 +67,9 @@ const fileUploadOptions = multer({
  */
 router.get('/', async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const { genre, author } = req.query;
@@ -142,6 +145,9 @@ router.get('/', async (req, res) => {
  */
 router.post('/create', authRequired, async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const { title, content, genre, description, coverImage } = req.body;
 
     if (!title || !content || !genre || !description) {
@@ -227,6 +233,9 @@ router.post('/create', authRequired, async (req, res) => {
 // POST /api/v1/stories/upload - Upload user story (Live Writer)
 router.post('/upload', authRequired, fileUploadOptions.fields([{ name: 'coverImage', maxCount: 1 }]), async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const { title, description, content, genre, twists, tags, imageUrls, formatType, characterSetting } = req.body;
     const coverImage = req.files?.coverImage?.[0];
 
@@ -327,6 +336,9 @@ router.post('/upload', authRequired, fileUploadOptions.fields([{ name: 'coverIma
  */
 router.get('/search/:id', async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const { data: story, error } = await supabaseAdmin
       .from('stories')
       .select('*, profiles!author_id(username, avatar_url, display_name)')
@@ -549,6 +561,9 @@ try {
  */
 router.post('/upload-file', authRequired, fileUploadOptions.fields([{ name: 'file', maxCount: 1 }, { name: 'coverImage', maxCount: 1 }]), async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const { title, genre, formatType, tags, description, characterSetting } = req.body;
     const file = req.files?.file?.[0];
     const coverImage = req.files?.coverImage?.[0];
@@ -704,6 +719,9 @@ router.post('/upload-file', authRequired, fileUploadOptions.fields([{ name: 'fil
  */
 router.post('/upload-cover', authRequired, fileUploadOptions.single('coverImage'), async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const file = req.file;
     if (!file) {
       return res.status(400).json({ error: 'coverImage file is required' });
@@ -745,6 +763,9 @@ router.post('/upload-cover', authRequired, fileUploadOptions.single('coverImage'
  */
 router.post('/publish-vedascript', authRequired, async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const {
       draftKey,
       title,
@@ -850,6 +871,9 @@ router.post('/publish-vedascript', authRequired, async (req, res) => {
  */
 router.get('/mine', authRequired, async (req, res) => {
   try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
     const { limit = 50, offset = 0, status } = req.query;
 
     let query = supabaseAdmin
@@ -880,5 +904,32 @@ router.get('/mine', authRequired, async (req, res) => {
   }
 });
 
-module.exports = router;
+// GET /api/v1/stories/:id — alias for /search/:id for BFF consistency
+router.get('/:id', async (req, res) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(503).json({ error: 'Database not configured' });
+    }
+    const { data: story, error } = await supabaseAdmin
+      .from('stories')
+      .select('*, profiles!author_id(username, avatar_url, display_name)')
+      .eq('id', req.params.id)
+      .single();
 
+    if (error || !story) {
+      return res.status(404).json({ error: 'Story not found' });
+    }
+
+    // Increment view count
+    await supabaseAdmin
+      .from('stories')
+      .update({ views: (story.views || 0) + 1 })
+      .eq('id', req.params.id);
+
+    return res.json(story);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+module.exports = router;

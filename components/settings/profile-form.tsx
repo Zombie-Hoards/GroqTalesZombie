@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/client";
 
 type ProfileData = {
   username: string;
@@ -28,14 +27,11 @@ type ProfileData = {
 };
 
 export function ProfileForm() {
-  const supabase = createClient();
-  const [sessionUser, setSessionUser] = useState<any>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => {
-      setSessionUser(data?.session?.user ?? null);
-    });
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    setIsAuthenticated(!!token);
   }, []);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -58,9 +54,9 @@ export function ProfileForm() {
   useEffect(() => {
     async function loadProfile() {
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData?.session?.access_token;
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com'}/api/v1/settings/profile`, {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+        const res = await fetch(`${baseUrl}/api/v1/settings/profile`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (!res.ok) throw new Error();
@@ -81,44 +77,19 @@ export function ProfileForm() {
         toast.error("Failed to load profile");
       }
     }
-    if (sessionUser) {
+    if (isAuthenticated) {
       loadProfile();
     }
-  }, [sessionUser, setValue]);
+  }, [isAuthenticated, setValue]);
 
   const onSubmit = async (data: ProfileData) => {
     setIsLoading(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
 
-      // 1. Update Supabase Auth metadata
-      await supabase.auth.updateUser({
-        data: {
-          name: data.displayName,
-          username: data.username,
-          bio: data.bio,
-          website: data.website,
-          location: data.location,
-          primaryGenre: data.primaryGenre
-        }
-      });
-
-      // 1.5 Update Supabase Database (Profiles Table)
-      if (sessionData?.session?.user?.id) {
-        await supabase.from('profiles').upsert({
-          id: sessionData.session.user.id,
-          username: data.username,
-          full_name: data.displayName,
-          avatar_url: avatarUrl,
-          bio: data.bio,
-          website: data.website,
-          updated_at: new Date().toISOString(),
-        });
-      }
-
-      // 2. Sync to Render backend (which proxies to Mongo and CF D1)
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com'}/api/v1/settings/profile`, {
+      // Update profile via backend API (BFF pattern)
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+      const res = await fetch(`${baseUrl}/api/v1/settings/profile`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -151,10 +122,9 @@ export function ProfileForm() {
           <div className="flex flex-col md:flex-row gap-4 items-start">
             <div>
               <Avatar className="w-24 h-24">
-                <AvatarImage src={avatarUrl || sessionUser?.user_metadata?.avatar_url || "/placeholder-avatar.jpg"} />
+                <AvatarImage src={avatarUrl || "/placeholder-avatar.jpg"} />
                 <AvatarFallback>
                   {displayName?.slice(0, 2).toUpperCase() || 
-                  sessionUser?.user_metadata?.name?.slice(0, 2).toUpperCase() || 
 
                 "GT"}
                 </AvatarFallback>

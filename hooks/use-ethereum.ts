@@ -5,6 +5,13 @@ import { useWeb3 } from '@/components/providers/web3-provider';
 import type { StoryMetadata, MintedNFT } from '@/lib/ethereum-service';
 import { ACTIVE_CHAIN, CHAIN_ID_HEX, isCorrectChain } from '@/lib/chain-config';
 
+const PLACEHOLDER_IPFS_CID = 'ipfs://bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi';
+
+const isValidIpfsUri = (uri?: string | null): boolean => {
+    if (!uri) return false;
+    return uri.startsWith('ipfs://') || uri.startsWith('Qm') || uri.startsWith('bafy');
+};
+
 type EthereumNetworkInfo = {
     chainId: number;
     name: string;
@@ -98,34 +105,38 @@ export function useEthereum(): UseEthereumResult {
                     throw new Error(msg);
                 }
 
-                const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+                if (!isValidIpfsUri(metadata.coverImage)) {
+                    const msg = 'Valid IPFS cover image URI is required to mint. Must be a CID or ipfs:// URI.';
+                    setError(msg);
+                    throw new Error(msg);
+                }
 
-                // Submit mint request through the admin pipeline
-                const response = await fetch(`${baseUrl}/api/v1/nft/mint-request`, {
+                const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
+                const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+                // Direct mint natively on the backend via Alchemy
+                const response = await fetch(`${baseUrl}/api/v1/nft/eth-mainnet/mint`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { Authorization: `Bearer ${token}` } : {})
+                    },
                     body: JSON.stringify({
-                        storyId: metadata.id, // Using stable unique ID instead of title
-                        nftName: metadata.title,
-                        nftDescription: metadata.description || metadata.excerpt || '',
-                        coverImageUrl: metadata.coverImage || null,
-                        metadata: {
-                            ...metadata,
-                            authorAddress: account,
-                            network: 'ethereum-mainnet',
-                        },
+                        toAddress: account,
+                        tokenUri: metadata.coverImage || PLACEHOLDER_IPFS_CID,
                     }),
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Mint request failed: ${response.statusText}`);
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.error || `Mint failed: ${response.statusText}`);
                 }
 
                 const data = await response.json();
 
                 const result: MintedNFT = {
                     tokenId: data.tokenId || 'pending',
-                    transactionHash: data.txHash || 'pending-review',
+                    transactionHash: data.txHash || 'pending',
                     metadata: { ...metadata, authorAddress: account },
                     contractAddress: process.env.NEXT_PUBLIC_STORY_NFT_CONTRACT || undefined,
                 };
