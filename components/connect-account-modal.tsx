@@ -60,6 +60,35 @@ export function ConnectAccountModal({
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: 'spring', stiffness: 400, damping: 28 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none"
+            tabIndex={-1}
+            ref={(node) => {
+              if (node && isOpen) {
+                // slight delay to allow animation frame to mount focusable children
+                requestAnimationFrame(() => node.focus());
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Tab') {
+                const focusableElements = e.currentTarget.querySelectorAll(
+                  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                if (focusableElements.length > 0) {
+                  const firstElement = focusableElements[0] as HTMLElement;
+                  const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+                  if (e.shiftKey) {
+                    if (document.activeElement === firstElement) {
+                      e.preventDefault();
+                      lastElement.focus();
+                    }
+                  } else {
+                    if (document.activeElement === lastElement) {
+                      e.preventDefault();
+                      firstElement.focus();
+                    }
+                  }
+                }
+              }
+            }}
           >
             <div className="relative w-full max-w-md pointer-events-auto">
               {/* Glow */}

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Active full support: 1.4.0 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
 
+## [1.8.3] - 2026-03-09
+
+### Fixed
+
+- **Accessibility**: Added programmatic focus trapping and Escape key management natively to `components/connect-account-modal.tsx` so keyboard users have a strict cycle scope when authenticating.
+- **Form State Sync**: Hardened component state invalidation in `components/nft-mint-modal.tsx`; changing between duplicate titles across different `storyId` variations now properly flushes the internal mint form buffers. Fixed broken ARIA descriptive bindings on sub-views.
+- **Data Selection Faults**: Stripped missing un-migrated schema columns (`description`, `cover_image`, `parameters`) from standard `maybeSingle` queries inside `app/stories/[id]/client.tsx` to stop PostgreSQL masking structural errors as soft 404s. Also wrapped `useEffect` hook state sets with strict unmount/ID-switch cancellation bounds to prevent asynchronous UI overwrites.
+- **Draft Sorting**: Fixed the `/api/v1/drafts/list` endpoint query internally requesting `updated_at` ordering when user intentions strictly dictate tracking the JSON snapshot buffer's synthetic `current_updated_at` timestamps instead.
+
 ## [1.8.2] - 2026-03-09
 
 ### Fixed

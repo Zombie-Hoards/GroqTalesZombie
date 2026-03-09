@@ -452,7 +452,7 @@ router.get('/list', authRequired, async (req, res) => {
       .from('drafts')
       .select('draft_key, story_type, story_format, current_title, current_genre, current_version, current_updated_at, created_at, updated_at')
       .eq('owner_id', req.user.id)
-      .order('updated_at', { ascending: false })
+      .order('current_updated_at', { ascending: false })
       .limit(safeLimit);
 
     if (storyType && typeof storyType === 'string') {

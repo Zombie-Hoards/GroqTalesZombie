@@ -50,13 +50,18 @@ export default function StoryClient({ id }: { id: string }) {
   const [supabase] = useState(() => createClient());
 
   useEffect(() => {
+    let cancelled = false;
+
     async function fetchStory() {
+      setNotFound(false);
       setLoading(true);
       const { data, error } = await supabase
         .from('stories')
-        .select('id, title, genre, author_name, description, cover_image, views, likes, content, parameters')
+        .select('id, title, genre, author_name, views, likes, content')
         .eq('id', id)
         .maybeSingle();
+
+      if (cancelled) return;
 
       if (error || !data) {
         setNotFound(true);
@@ -66,6 +71,10 @@ export default function StoryClient({ id }: { id: string }) {
       setLoading(false);
     }
     fetchStory();
+
+    return () => {
+      cancelled = true;
+    };
   }, [id, supabase]);
 
   if (loading) {

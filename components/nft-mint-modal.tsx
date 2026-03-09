@@ -87,7 +87,7 @@ export function NftMintModal({
       setRoyaltyPercentage(5);
       setIsSubmitting(false);
     }
-  }, [isOpen, storyTitle, storyDescription]);
+  }, [isOpen, storyId, storyTitle, storyDescription]);
 
   // Escape key handler
   React.useEffect(() => {
@@ -243,7 +243,7 @@ export function NftMintModal({
                 >
                   <ArrowLeft className="w-4 h-4" />
                 </button>
-                <h2 className="text-lg font-bold text-white">Configure your NFT</h2>
+                <h2 id="mint-modal-title" className="text-lg font-bold text-white">Configure your NFT</h2>
               </div>
 
               {/* Cover Preview */}
@@ -252,6 +252,7 @@ export function NftMintModal({
                   <img src={coverImageUrl} alt="NFT Cover" className="w-full h-32 object-cover" />
                 </div>
               )}
+              <div id="mint-modal-desc" className="sr-only">Set your NFT details, pricing, and supply.</div>
 
               {/* NFT Name */}
               <div className="space-y-1.5">
@@ -363,8 +364,8 @@ export function NftMintModal({
                 <CheckCircle2 className="w-10 h-10 text-emerald-400" />
               </motion.div>
               <div>
-                <h2 className="text-xl font-bold text-white mb-1">Request Submitted!</h2>
-                <p className="text-sm text-white/50">
+                <h2 id="mint-modal-title" className="text-xl font-bold text-white mb-1">Request Submitted!</h2>
+                <p id="mint-modal-desc" className="text-sm text-white/50">
                   Your NFT mint request is now under admin review. You'll be notified once it's approved.
                 </p>
               </div>
