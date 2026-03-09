@@ -189,7 +189,7 @@ export default function DocsPage() {
         {/* ═══════════ QUICK LINKS GRID ═══════════ */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
           <QuickLink icon={PenSquare} title="Create Stories" desc="AI-powered story creation" href="/create/ai-story" color="var(--comic-red)" />
-          <QuickLink icon={Wallet} title="Wallet Setup" desc="Connect your Monad wallet" href="#wallet-setup" color="var(--comic-cyan)" />
+          <QuickLink icon={Wallet} title="Wallet Setup" desc="Connect your Ethereum wallet" href="#wallet-setup" color="var(--comic-cyan)" />
           <QuickLink icon={Layers} title="Mint NFTs" desc="Turn stories into NFTs" href="#minting" color="var(--comic-purple)" />
           <QuickLink icon={Users} title="Community" desc="Join fellow creators" href="/community/creators" color="var(--comic-green)" />
         </div>
@@ -219,7 +219,7 @@ export default function DocsPage() {
             <StepCard
               number="02"
               title="Set Up Your Wallet"
-              description="Connect your Monad wallet to mint and collect story NFTs. New to Web3? Don't worry — follow our step-by-step guide below."
+              description="Connect your Ethereum wallet to mint and collect story NFTs. New to Web3? Don't worry — follow our step-by-step guide below."
               action="Wallet Guide"
               actionHref="#wallet-setup"
               icon={Wallet}
@@ -257,14 +257,14 @@ export default function DocsPage() {
             <div className="p-6 border-b-4 border-foreground/10">
               <h3 className="font-black text-base uppercase text-foreground mb-4 flex items-center gap-2">
                 <Shield className="w-5 h-5 text-[var(--comic-cyan)]" />
-                Installing Monad Wallet
+                Installing Ethereum Wallet
               </h3>
               <div className="space-y-3">
                 {[
-                  { step: '1', text: 'Visit the official Monad wallet website', link: 'https://monad.xyz', linkText: 'monad.xyz' },
+                  { step: '1', text: 'Visit the official Ethereum wallet website', link: 'https://metamask.io', linkText: 'metamask.io' },
                   { step: '2', text: 'Download and install the wallet extension for your browser' },
                   { step: '3', text: 'Create a new wallet and securely store your recovery phrase' },
-                  { step: '4', text: 'Add MONAD tokens to your wallet for transactions' },
+                  { step: '4', text: 'Add ETH to your wallet for transactions' },
                 ].map((item) => (
                   <div key={item.step} className="flex items-start gap-3">
                     <div className="w-7 h-7 flex-shrink-0 flex items-center justify-center bg-[var(--comic-cyan)] text-white font-black text-xs border border-foreground/20">
@@ -297,7 +297,7 @@ export default function DocsPage() {
               <div className="space-y-3">
                 {[
                   'Click the "Connect Wallet" button in the navigation bar',
-                  'Select Monad from the available wallet options',
+                  'Select Ethereum from the available wallet options',
                   'Approve the connection request in your wallet',
                   'Your wallet address will appear in the top right corner',
                 ].map((text, i) => (
@@ -351,7 +351,7 @@ export default function DocsPage() {
               {
                 emoji: '🔗',
                 title: 'Mint',
-                desc: 'Hit the Mint button. Your story becomes an NFT on the Monad blockchain — forever yours.',
+                desc: 'Hit the Mint button. Your story becomes an NFT on the Ethereum blockchain — forever yours.',
                 color: 'var(--comic-purple)',
               },
             ].map((item) => (
@@ -385,7 +385,7 @@ export default function DocsPage() {
               index={0}
               emoji="🤖"
               question="What is GroqTales?"
-              answer="GroqTales is a platform that combines AI-powered storytelling with blockchain technology. Create unique stories using Groq's lightning-fast AI, mint them as NFTs on the Monad blockchain, and share them with a global community of readers and collectors."
+              answer="GroqTales is a platform that combines AI-powered storytelling with blockchain technology. Create unique stories using Groq's lightning-fast AI, mint them as NFTs on the Ethereum blockchain, and share them with a global community of readers and collectors."
             />
             <FaqItem
               index={1}
@@ -397,25 +397,25 @@ export default function DocsPage() {
               index={2}
               emoji="💰"
               question="What are the fees?"
-              answer="Story generation is completely free — no limits! When minting NFTs, you pay only the Monad network gas fees, which are typically very low (fractions of a cent). We take a 5% commission only on secondary NFT sales."
+              answer="Story generation is completely free — no limits! When minting NFTs, you pay only the Ethereum network gas fees, which are typically very low (fractions of a cent). We take a 5% commission only on secondary NFT sales."
             />
             <FaqItem
               index={3}
               emoji="🏪"
               question="How do I sell my story NFTs?"
-              answer="After minting, your NFT appears in your profile. You can list it for sale on our marketplace by setting a price in MONAD tokens. Buyers purchase directly through the platform, and you receive payment instantly. You also earn royalties on future resales."
+              answer="After minting, your NFT appears in your profile. You can list it for sale on our marketplace by setting a price in CRAFTS tokens. Buyers purchase directly through the platform, and you receive payment instantly. You also earn royalties on future resales."
             />
             <FaqItem
               index={4}
               emoji="🔒"
               question="Is my content safe?"
-              answer="Absolutely. Once minted as an NFT, your story is permanently recorded on the Monad blockchain. You retain full copyright and ownership. The blockchain provides tamper-proof provenance — nobody can claim your work as their own."
+              answer="Absolutely. Once minted as an NFT, your story is permanently recorded on the Ethereum blockchain. You retain full copyright and ownership. The blockchain provides tamper-proof provenance — nobody can claim your work as their own."
             />
             <FaqItem
               index={5}
               emoji="🌐"
               question="Do I need crypto experience?"
-              answer="Not at all! You can start creating stories without any crypto. When you're ready to mint, our wallet setup guide walks you through everything step-by-step. The Monad blockchain makes the process fast and affordable."
+              answer="Not at all! You can start creating stories without any crypto. When you're ready to mint, our wallet setup guide walks you through everything step-by-step. The Ethereum blockchain makes the process fast and affordable."
             />
           </div>
         </section>

@@ -209,19 +209,36 @@ export default function DashboardPage() {
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
+  const [profileError, setProfileError] = useState<string | null>(null);
+
   // ── Load Profile ──────────────────────────────────────────────
 
   useEffect(() => {
     (async () => {
       setProfileLoading(true);
+      setProfileError(null);
       try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        if (!token) {
+          setProfileError('not_authenticated');
+          setProfileLoading(false);
+          return;
+        }
         const res = await getUserProfile();
-        if (res.ok && (res.data as any)?.success !== false) {
+        if (!res.ok) {
+          if (res.status === 401) {
+            setProfileError('session_expired');
+            setProfileLoading(false);
+            return;
+          }
+          throw new Error('Failed to load profile');
+        }
+        if ((res.data as any)?.success !== false) {
           const d = (res.data as any)?.data || (res.data as any)?.user || res.data;
           setProfile({
-            displayName: d.displayName || d.username || 'Creator',
+            displayName: d.displayName || d.display_name || d.username || 'Creator',
             email: d.email || '',
-            avatar: d.avatar || d.profileImage || null,
+            avatar: d.avatar || d.avatar_url || d.profileImage || null,
             bio: d.bio || '',
             stats: {
               stories: d.stats?.stories || d.storyCount || 0,
@@ -234,7 +251,7 @@ export default function DashboardPage() {
             },
           });
           setSettingsForm({
-            displayName: d.displayName || d.username || '',
+            displayName: d.displayName || d.display_name || d.username || '',
             bio: d.bio || '',
             notifications: d.notifications !== false,
             publicProfile: d.publicProfile !== false,
@@ -242,6 +259,7 @@ export default function DashboardPage() {
         }
       } catch (err) {
         console.error('Failed to load profile:', err);
+        setProfileError('load_failed');
       } finally {
         setProfileLoading(false);
       }
@@ -354,6 +372,53 @@ export default function DashboardPage() {
         transition={{ duration: 0.4 }}
         className="relative z-10 max-w-[1200px] mx-auto px-4 py-6"
       >
+        {/* ════════════════════════════════════════════════════════
+           PROFILE ERROR STATE
+           ════════════════════════════════════════════════════════ */}
+        {profileError && (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+            </div>
+            <h2 className="text-lg font-bold text-white mb-2">
+              {profileError === 'session_expired'
+                ? 'Session Expired'
+                : profileError === 'not_authenticated'
+                  ? 'Not Logged In'
+                  : 'Failed to Load Dashboard'}
+            </h2>
+            <p className="text-sm text-white/40 mb-6 max-w-sm">
+              {profileError === 'session_expired'
+                ? 'Your session has expired. Please sign in again to access your dashboard.'
+                : profileError === 'not_authenticated'
+                  ? 'You need to be logged in to access your dashboard.'
+                  : 'Something went wrong loading your profile. Please try again.'}
+            </p>
+            <div className="flex gap-3">
+              {(profileError === 'session_expired' || profileError === 'not_authenticated') ? (
+                <Link href="/sign-in">
+                  <Button className="bg-blue-600 hover:bg-blue-500 text-white">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign In
+                  </Button>
+                </Link>
+              ) : (
+                <Button onClick={() => window.location.reload()} variant="outline" className="border-white/10 text-white/70 hover:text-white">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Retry
+                </Button>
+              )}
+              <Link href="/">
+                <Button variant="ghost" className="text-white/40 hover:text-white">
+                  Back to Home
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {!profileError && (
+        <>
         {/* ════════════════════════════════════════════════════════
            HERO WELCOME BLOCK
            ════════════════════════════════════════════════════════ */}
@@ -874,6 +939,8 @@ export default function DashboardPage() {
             )}
           </motion.div>
         </AnimatePresence>
+        </>
+        )}
       </motion.div>
     </div>
   );

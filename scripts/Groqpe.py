@@ -18,7 +18,7 @@ import time
 from groq import Groq
 
 # Set your API key - use the one from environment or the default one
-API_KEY = os.environ.get("GROQ_API_KEY", "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")
+API_KEY = os.environ.get("GROQ_API_KEY")
 
 # Initialize the Groq client
 client = Groq(api_key=API_KEY)

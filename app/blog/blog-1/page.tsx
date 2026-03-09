@@ -204,7 +204,7 @@ type ProParameters = {
 
           <h2>On‑chain + CollabStory Protocol</h2>
           <p>
-            The second pillar: a story is an NFT, not a random JSON blob on some server. We're integrating Monad as the base chain for story minting. Design goals:
+            The second pillar: a story is an NFT, not a random JSON blob on some server. We're integrating Ethereum as the base chain for story minting. Design goals:
           </p>
           <ul>
             <li><strong>1 story = 1 NFT.</strong></li>
@@ -313,7 +313,7 @@ function mintStory(
             
             <div className="p-6 rounded-2xl bg-white/5 border border-white/10 hover:border-primary/50 transition-colors shadow-lg">
               <h3 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-                <span className="text-primary text-xl">2.</span> Smart Contracts / Monad
+                <span className="text-primary text-xl">2.</span> Smart Contracts / Ethereum
               </h3>
               <ul className="space-y-2 text-sm text-foreground/80 list-disc list-inside">
                 <li>Formalize and implement the CollabStory Protocol.</li>
