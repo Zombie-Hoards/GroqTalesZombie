@@ -126,9 +126,8 @@ export default function GalleryPage() {
       })
       .then(json => {
         const data = json.data || [];
-        // Only show unminted ones that have a file OR were uploaded logic.
-        // We filter out is_minted == true from the results
-        const galleryItems = data.filter((story: any) => story.is_minted === false || !story.is_minted);
+        // Show all stories including minted ones
+        const galleryItems = data;
         
         const mapped = galleryItems.map((story: any, i: number) => ({
           id: story.id || story._id || `feed-item-${i}`,
@@ -188,7 +187,7 @@ export default function GalleryPage() {
           </div>
           <h1 className="text-5xl md:text-6xl font-bold tracking-tighter mb-4">Creative Archive</h1>
           <p className="text-white/50 text-lg max-w-2xl">
-            Explore unminted masterpieces uploaded by the community. Validated and synthesized by our Synoptic AI framework.
+            Explore masterpieces minted and uploaded by the community. Validated and synthesized by our Synoptic AI framework.
           </p>
         </div>
 

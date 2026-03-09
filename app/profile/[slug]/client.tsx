@@ -44,37 +44,62 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 /* ───────────── Types ───────────── */
 interface UserProfile {
-    _id: string;
+    id?: string;
+    _id?: string;
     username?: string;
     firstName?: string;
+    first_name?: string;
     lastName?: string;
+    last_name?: string;
+    display_name?: string;
     bio?: string;
     avatar?: string;
+    avatar_url?: string;
     email?: string;
     wallet?: { address?: string };
     walletAddress?: string;
+    wallet_address?: string;
     badges?: string[];
     socialLinks?: { twitter?: string; website?: string };
     createdAt?: string;
+    created_at?: string;
 }
 
 interface StoryItem {
-    _id: string;
+    _id?: string;
+    id?: string;
     title: string;
     content?: string;
     genre?: string;
     coverImage?: string;
+    cover_image?: string;
     stats?: { likes?: number; views?: number; comments?: number };
+    likes?: number;
+    views?: number;
     createdAt?: string;
+    created_at?: string;
     isNFT?: boolean;
     isMinted?: boolean;
+    is_minted?: boolean;
     moderationStatus?: 'pending' | 'approved' | 'rejected';
+    moderation_status?: 'pending' | 'approved' | 'rejected';
+    source?: string;
 }
 
 interface ProfileStats {
     storyCount: number;
     totalLikes: number;
     totalViews: number;
+}
+
+interface DraftItem {
+    draftKey: string;
+    storyType: string;
+    title: string;
+    genre: string;
+    version: number;
+    updatedAt: string;
+    createdAt: string;
 }
 
 /* ───────────── Helpers ───────────── */
@@ -118,7 +143,8 @@ function StoryCard({ story, showStatus }: { story: StoryItem; showStatus?: boole
         story.content && story.content.length > 120
             ? story.content.slice(0, 120) + '…'
             : story.content || 'No excerpt available.';
-    return (
+    const storyId = story._id || story.id;
+    const cardContent = (
         <Card className="group overflow-hidden border-slate-800 bg-slate-950 hover:border-violet-500/40 transition-all duration-300 hover:shadow-2xl hover:shadow-violet-900/10">
             {/* Cover gradient */}
             <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-violet-900/60 via-indigo-900/40 to-slate-900">
@@ -165,12 +191,17 @@ function StoryCard({ story, showStatus }: { story: StoryItem; showStatus?: boole
             </div>
         </Card>
     );
+    if (storyId) {
+        return <Link href={`/stories/${storyId}`}>{cardContent}</Link>;
+    }
+    return cardContent;
 }
 
 /* ───────────── Main Component ───────────── */
 export default function ProfilePageClient({ slug }: { slug: string }) {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [stories, setStories] = useState<StoryItem[]>([]);
+    const [drafts, setDrafts] = useState<DraftItem[]>([]);
     const [stats, setStats] = useState<ProfileStats>({
         storyCount: 0,
         totalLikes: 0,
@@ -206,12 +237,44 @@ export default function ProfilePageClient({ slug }: { slug: string }) {
                     if (!res.ok) throw new Error('Failed to load profile');
                     const json = await res.json();
                     if (!json.success) throw new Error(json.error || 'Failed');
-                    setUser(json.data);
-                    setStories(json.stories || []);
+                    // Normalize Supabase field names
+                    const profileData = json.data;
+                    setUser({
+                        ...profileData,
+                        _id: profileData.id || profileData._id,
+                        firstName: profileData.first_name || profileData.firstName,
+                        lastName: profileData.last_name || profileData.lastName,
+                        avatar: profileData.avatar_url || profileData.avatar,
+                        walletAddress: profileData.wallet_address || profileData.walletAddress,
+                        createdAt: profileData.created_at || profileData.createdAt,
+                    });
+                    // Normalize stories
+                    const rawStories = json.stories || [];
+                    setStories(rawStories.map((s: StoryItem) => ({
+                        ...s,
+                        _id: s.id || s._id,
+                        moderationStatus: s.moderation_status || s.moderationStatus,
+                        isMinted: s.is_minted || s.isMinted,
+                        coverImage: s.cover_image || s.coverImage,
+                        stats: s.stats || { likes: s.likes || 0, views: s.views || 0, comments: 0 },
+                        createdAt: s.created_at || s.createdAt,
+                    })));
                     setStats(
                         json.stats || { storyCount: 0, totalLikes: 0, totalViews: 0 }
                     );
                     setIsOwner(true);
+
+                    // Load drafts for owner
+                    try {
+                        const draftRes = await fetch(`${baseUrl}/api/v1/drafts/list?storyType=vedascript`, {
+                            headers: { Authorization: `Bearer ${token}` },
+                            signal: controller.signal,
+                        });
+                        if (draftRes.ok) {
+                            const draftJson = await draftRes.json();
+                            setDrafts(draftJson.data || []);
+                        }
+                    } catch { /* drafts are optional */ }
                 } else {
                     // Fetch public profile by username
                     const res = await fetch(`${baseUrl}/api/v1/users/profile/username/${encodeURIComponent(slug)}`, {
@@ -221,10 +284,28 @@ export default function ProfilePageClient({ slug }: { slug: string }) {
                     const json = await res.json();
                     if (!json.success) throw new Error(json.error || 'Failed');
 
-                    setUser(json.data.user);
-                    setStories(json.data.stories || []);
+                    const profileData = json.data?.user || json.data;
+                    setUser({
+                        ...profileData,
+                        _id: profileData.id || profileData._id,
+                        firstName: profileData.first_name || profileData.firstName,
+                        lastName: profileData.last_name || profileData.lastName,
+                        avatar: profileData.avatar_url || profileData.avatar,
+                        walletAddress: profileData.wallet_address || profileData.walletAddress,
+                        createdAt: profileData.created_at || profileData.createdAt,
+                    });
+                    const rawStories2 = json.data?.stories || json.stories || [];
+                    setStories(rawStories2.map((s: StoryItem) => ({
+                        ...s,
+                        _id: s.id || s._id,
+                        moderationStatus: s.moderation_status || s.moderationStatus,
+                        isMinted: s.is_minted || s.isMinted,
+                        coverImage: s.cover_image || s.coverImage,
+                        stats: s.stats || { likes: s.likes || 0, views: s.views || 0, comments: 0 },
+                        createdAt: s.created_at || s.createdAt,
+                    })));
                     setStats(
-                        json.data.stats || { storyCount: 0, totalLikes: 0, totalViews: 0 }
+                        json.data?.stats || json.stats || { storyCount: 0, totalLikes: 0, totalViews: 0 }
                     );
 
                     // Check ownership
@@ -239,10 +320,9 @@ export default function ProfilePageClient({ slug }: { slug: string }) {
                             });
                             if (meRes.ok) {
                                 const meJson = await meRes.json();
-                                if (
-                                    meJson.success &&
-                                    meJson.data?._id === json.data.user._id
-                                ) {
+                                const meId = meJson.data?.id || meJson.data?._id;
+                                const profileId = profileData.id || profileData._id;
+                                if (meJson.success && meId && meId === profileId) {
                                     setIsOwner(true);
                                 }
                             }
@@ -355,13 +435,13 @@ export default function ProfilePageClient({ slug }: { slug: string }) {
     }
 
     /* ── Derived values ── */
-    const displayName = user.firstName
-        ? `${user.firstName} ${user.lastName || ''}`.trim()
-        : user.username || 'Anonymous';
+    const displayName = user.first_name || user.firstName
+        ? `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim()
+        : user.display_name || user.username || 'Anonymous';
     const initials = displayName.slice(0, 2).toUpperCase();
-    const walletAddr = user.wallet?.address || user.walletAddress;
-    const joinDate = user.createdAt
-        ? new Date(user.createdAt).toLocaleDateString('en-US', {
+    const walletAddr = user.wallet?.address || user.wallet_address || user.walletAddress;
+    const joinDate = (user.created_at || user.createdAt)
+        ? new Date(user.created_at || user.createdAt || '').toLocaleDateString('en-US', {
             month: 'long',
             year: 'numeric',
         })
@@ -405,7 +485,7 @@ export default function ProfilePageClient({ slug }: { slug: string }) {
                         <div className="relative group">
                             <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-500 to-violet-500 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-1000" />
                             <Avatar className="w-28 h-28 md:w-36 md:h-36 border-4 border-background relative">
-                                <AvatarImage src={user.avatar} alt={displayName} />
+                                <AvatarImage src={user.avatar_url || user.avatar} alt={displayName} />
                                 <AvatarFallback className="text-2xl font-bold bg-slate-800 text-slate-200">
                                     {initials}
                                 </AvatarFallback>
@@ -583,6 +663,14 @@ export default function ProfilePageClient({ slug }: { slug: string }) {
                                 <TabsTrigger value="saved" className="gap-2">
                                     <Bookmark className="w-4 h-4" /> Saved
                                 </TabsTrigger>
+                                {isOwner && (
+                                    <TabsTrigger value="drafts" className="gap-2">
+                                        <Bookmark className="w-4 h-4 text-amber-400" /> Drafts
+                                        {drafts.length > 0 && (
+                                            <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-400">{drafts.length}</span>
+                                        )}
+                                    </TabsTrigger>
+                                )}
                                 <TabsTrigger value="activity" className="gap-2">
                                     <Activity className="w-4 h-4" /> Activity
                                 </TabsTrigger>
@@ -596,13 +684,10 @@ export default function ProfilePageClient({ slug }: { slug: string }) {
                             {stories.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {stories.map((story) => (
-                                        <div key={story._id} className="relative">
-                                            <Link
-                                                href={`/stories/${story._id}`}
-                                                className="block"
-                                            >
+                                        <div key={story._id || story.id} className="relative">
+                                            <div className="block">
                                                 <StoryCard story={story} showStatus={isOwner} />
-                                            </Link>
+                                            </div>
                                             {/* Mint NFT button for approved stories that haven't been minted */}
                                             {isOwner && story.moderationStatus === 'approved' && !story.isMinted && (
                                                 <Button
@@ -610,7 +695,7 @@ export default function ProfilePageClient({ slug }: { slug: string }) {
                                                     className="absolute bottom-12 right-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs gap-1 shadow-lg"
                                                     onClick={(e) => {
                                                         e.preventDefault();
-                                                        handleMintNft(story._id);
+                                                        handleMintNft(story._id || story.id || '');
                                                     }}
                                                 >
                                                     <Coins className="w-3 h-3" /> Mint NFT
@@ -636,6 +721,49 @@ export default function ProfilePageClient({ slug }: { slug: string }) {
                                 </div>
                             )}
                         </TabsContent>
+
+                        {/* Drafts Tab */}
+                        {isOwner && (
+                            <TabsContent value="drafts" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                {drafts.length > 0 ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {drafts.map((draft) => (
+                                            <a
+                                                key={draft.draftKey}
+                                                href={`/create/ai-story?draftKey=${encodeURIComponent(draft.draftKey)}`}
+                                                className="group block p-4 rounded-xl border border-slate-800 bg-slate-950 hover:border-amber-500/40 hover:shadow-lg transition-all"
+                                            >
+                                                <div className="flex items-start justify-between mb-2">
+                                                    <h3 className="text-sm font-semibold text-slate-100 line-clamp-1 group-hover:text-amber-400 transition-colors">
+                                                        {draft.title || 'Untitled Draft'}
+                                                    </h3>
+                                                    <span className="text-[10px] text-slate-600 ml-2 shrink-0">v{draft.version}</span>
+                                                </div>
+                                                {draft.genre && (
+                                                    <span className="inline-block text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-2">
+                                                        {draft.genre}
+                                                    </span>
+                                                )}
+                                                <p className="text-xs text-slate-500">
+                                                    Saved {new Date(draft.updatedAt).toLocaleDateString()}
+                                                </p>
+                                            </a>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="p-12 text-center text-slate-500 bg-slate-900/30 rounded-xl border border-slate-800 border-dashed">
+                                        <Bookmark className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                                        <p className="font-medium">No VedaScript drafts</p>
+                                        <p className="text-sm mt-1 text-slate-600">
+                                            Drafts saved from the VedaScript Engine will appear here.
+                                        </p>
+                                        <a href="/create/ai-story" className="inline-block mt-4 px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-sm hover:bg-amber-500/20 transition-colors">
+                                            Open VedaScript Engine
+                                        </a>
+                                    </div>
+                                )}
+                            </TabsContent>
+                        )}
 
                         <TabsContent value="saved">
                             <div className="p-12 text-center text-slate-500 bg-slate-900/30 rounded-xl border border-slate-800 border-dashed">

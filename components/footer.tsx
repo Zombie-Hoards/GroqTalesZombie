@@ -21,6 +21,7 @@ import React, { useState, useEffect } from 'react';
 
 import { AdminLoginModal } from './admin-login-modal';
 import { UploadStoryTrigger } from './upload-story-trigger';
+import { ComiCraftLogo } from './comicraft-logo';
 
 export function Footer({ version }: { version?: string }) {
   const currentYear = new Date().getFullYear();
@@ -80,10 +81,8 @@ export function Footer({ version }: { version?: string }) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
             {/* Brand Section */}
             <div className="space-y-6 flex flex-col items-start lg:col-span-2">
-              <Link href="/" className="group inline-block">
-                <h2 className="text-4xl font-semibold tracking-tighter text-white">
-                  Comicraft
-                </h2>
+              <Link href="/" className="group inline-block" aria-label="Comicraft home">
+                <ComiCraftLogo variant="full" colorScheme="color" size={38} animate={false} />
               </Link>
               <div className="text-left">
                 <p className="text-sm font-medium text-white/50 leading-relaxed max-w-sm">
@@ -218,9 +217,15 @@ export function Footer({ version }: { version?: string }) {
             <div className="group relative flex items-center justify-center p-2 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all cursor-default">
               <span className="text-white/40 mr-2">Powered by</span>
               <div className="relative inline-block overflow-hidden">
-                <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-600 relative z-10 group-hover:animate-glitch-1">Monad</span>
-                <span className="font-bold text-emerald-500 absolute top-0 left-0 -translate-x-[2px] opacity-0 group-hover:opacity-100 group-hover:animate-glitch-2">Monad</span>
-                <span className="font-bold text-blue-500 absolute top-0 left-0 translate-x-[2px] opacity-0 group-hover:opacity-100 group-hover:animate-glitch-3">Monad</span>
+                <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-600 relative z-10 group-hover:animate-glitch-1">Ethereum</span>
+                <span className="font-bold text-blue-500 absolute top-0 left-0 -translate-x-[2px] opacity-0 group-hover:opacity-100 group-hover:animate-glitch-2">Ethereum</span>
+                <span className="font-bold text-indigo-500 absolute top-0 left-0 translate-x-[2px] opacity-0 group-hover:opacity-100 group-hover:animate-glitch-3">Ethereum</span>
+              </div>
+              <span className="text-white/30 mx-2">&</span>
+              <div className="relative inline-block overflow-hidden">
+                <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-400 to-orange-500 relative z-10 group-hover:animate-glitch-1">Alchemy</span>
+                <span className="font-bold text-amber-400 absolute top-0 left-0 -translate-x-[2px] opacity-0 group-hover:opacity-100 group-hover:animate-glitch-2">Alchemy</span>
+                <span className="font-bold text-orange-500 absolute top-0 left-0 translate-x-[2px] opacity-0 group-hover:opacity-100 group-hover:animate-glitch-3">Alchemy</span>
               </div>
               <span className="text-white/30 mx-2">×</span>
               <div className="relative inline-block overflow-hidden">

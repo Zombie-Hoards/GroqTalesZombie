@@ -696,4 +696,189 @@ router.post('/upload-file', authRequired, fileUploadOptions.fields([{ name: 'fil
   }
 });
 
+
+// ─── Cover Image Upload ────────────────────────────────────────────────────
+/**
+ * POST /api/v1/stories/upload-cover
+ * Upload a cover image to Supabase Storage and return the public URL.
+ */
+router.post('/upload-cover', authRequired, fileUploadOptions.single('coverImage'), async (req, res) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ error: 'coverImage file is required' });
+    }
+
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.mimetype)) {
+      return res.status(400).json({ error: 'Invalid file type. PNG, JPG, WEBP only.' });
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'File too large. Max 5MB.' });
+    }
+
+    const ext = file.originalname.split('.').pop() || 'jpg';
+    const coverName = `${req.user.id}/cover_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+
+    const { error: uploadError } = await supabaseAdmin
+      .storage
+      .from('covers')
+      .upload(coverName, file.buffer, { contentType: file.mimetype, upsert: false });
+
+    if (uploadError) {
+      console.error('Cover upload error:', uploadError);
+      return res.status(500).json({ error: 'Failed to upload cover image' });
+    }
+
+    const { data: urlData } = supabaseAdmin.storage.from('covers').getPublicUrl(coverName);
+    return res.json({ url: urlData.publicUrl });
+  } catch (error) {
+    console.error('Upload cover error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── Publish VedaScript Story ─────────────────────────────────────────────
+/**
+ * POST /api/v1/stories/publish-vedascript
+ * Publishes a VedaScript-generated story. Accepts chapters, genres, tags, parameters, and optional cover URL.
+ */
+router.post('/publish-vedascript', authRequired, async (req, res) => {
+  try {
+    const {
+      draftKey,
+      title,
+      genres,
+      chapters,
+      parameters,
+      selectedParameters,
+      tags,
+      coverImageUrl,
+      compiledContent,
+    } = req.body;
+
+    if (!title || typeof title !== 'string' || !title.trim()) {
+      return res.status(400).json({ error: 'title is required' });
+    }
+    if (!chapters || !Array.isArray(chapters) || chapters.length === 0) {
+      return res.status(400).json({ error: 'chapters array is required' });
+    }
+    const hasContent = chapters.some(c => c.content && c.content.trim());
+    if (!hasContent) {
+      return res.status(400).json({ error: 'At least one chapter must have content' });
+    }
+
+    // Build compiled content if not provided
+    const content = compiledContent || chapters
+      .sort((a, b) => (a.index || 0) - (b.index || 0))
+      .map(c => `## ${c.title || 'Chapter'}\n\n${c.content || ''}`)
+      .join('\n\n---\n\n');
+
+    // Get author profile
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('username, display_name')
+      .eq('id', req.user.id)
+      .single();
+
+    const primaryGenre = Array.isArray(genres) && genres.length > 0 ? genres[0].toLowerCase() : 'fantasy';
+    const validTags = Array.isArray(tags) ? tags.filter(t => typeof t === 'string' && t.trim()).map(t => t.trim().toLowerCase()) : [];
+
+    const { data: story, error } = await supabaseAdmin
+      .from('stories')
+      .insert({
+        title: title.trim().slice(0, 150),
+        description: `A VedaScript-generated story across ${chapters.length} chapter${chapters.length !== 1 ? 's' : ''}.`,
+        content,
+        genre: primaryGenre,
+        genres: Array.isArray(genres) ? genres : [primaryGenre],
+        tags: validTags,
+        chapters: chapters,
+        parameters: parameters || {},
+        cover_image: coverImageUrl || null,
+        source: 'vedascript',
+        status: 'published',
+        author_id: req.user.id,
+        author_name: profile?.display_name || profile?.username || 'Anonymous',
+        is_verified: true,
+        is_minted: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('publish-vedascript DB error:', error);
+      // If genres/chapters/parameters columns don't exist, try minimal insert
+      if (error.message?.includes('column') || error.code === '42703') {
+        const { data: minimalStory, error: minError } = await supabaseAdmin
+          .from('stories')
+          .insert({
+            title: title.trim().slice(0, 150),
+            description: `A VedaScript-generated story across ${chapters.length} chapter${chapters.length !== 1 ? 's' : ''}.`,
+            content,
+            genre: primaryGenre,
+            tags: validTags,
+            cover_image: coverImageUrl || null,
+            source: 'vedascript',
+            author_id: req.user.id,
+            author_name: profile?.display_name || profile?.username || 'Anonymous',
+            is_verified: true,
+            is_minted: false,
+          })
+          .select()
+          .single();
+
+        if (minError) {
+          return res.status(500).json({ error: minError.message });
+        }
+        return res.status(201).json({ success: true, ...minimalStory, id: minimalStory.id, data: minimalStory });
+      }
+      return res.status(500).json({ error: error.message });
+    }
+
+    return res.status(201).json({ success: true, ...story, id: story.id, data: story });
+  } catch (error) {
+    console.error('publish-vedascript error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── Get My Stories ───────────────────────────────────────────────────────
+/**
+ * GET /api/v1/stories/mine
+ * Returns all stories for the authenticated user.
+ */
+router.get('/mine', authRequired, async (req, res) => {
+  try {
+    const { limit = 50, offset = 0, status } = req.query;
+
+    let query = supabaseAdmin
+      .from('stories')
+      .select('*')
+      .eq('author_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .range(Number(offset), Number(offset) + Number(limit) - 1);
+
+    if (status && ['draft', 'published'].includes(String(status))) {
+      query = query.eq('status', String(status));
+    }
+
+    const { data: stories, error, count } = await query;
+
+    if (error) {
+      return res.status(500).json({ error: error.message });
+    }
+
+    return res.json({
+      success: true,
+      data: stories || [],
+      count: count || (stories || []).length,
+    });
+  } catch (error) {
+    console.error('get-mine error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
+

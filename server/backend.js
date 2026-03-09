@@ -1,8 +1,8 @@
 /**
- * GroqTales Backend API Server
+ * COMICRAFT Backend API Server
  *
  * Express.js server for handling API requests, SDK endpoints,
- * and backend services for the GroqTales platform.
+ * and backend services for the COMICRAFT platform.
  */
 
 const express = require('express');
@@ -48,10 +48,10 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'GroqTales Backend API',
+      title: 'COMICRAFT Backend API',
       version: process.env.API_VERSION || '1.2.0',
       description:
-        'Complete REST API for the GroqTales AI-powered storytelling platform. ' +
+        'Complete REST API for the COMICRAFT AI-powered storytelling platform. ' +
         'Covers authentication, story management, AI generation, NFT operations, ' +
         'user profiles, helpbot chat, feed proxy, and settings management.',
       contact: {
@@ -83,6 +83,7 @@ const options = {
       { name: 'Marketplace', description: 'NFT marketplace — list, buy, cancel, and browse listings in CRAFTS' },
       { name: 'Comics', description: 'Comic creation and management' },
       { name: 'SDK', description: 'External SDK integration endpoints' },
+      { name: 'TTS', description: 'Text-to-speech narration via Sarvam AI Bulbul v3' },
     ],
     components: {
       securitySchemes: {
@@ -193,7 +194,7 @@ const options = {
           type: 'object',
           description: 'API landing page — overview and navigation',
           properties: {
-            name: { type: 'string', example: 'GroqTales Backend API' },
+            name: { type: 'string', example: 'COMICRAFT Backend API' },
             description: { type: 'string', example: 'AI-powered Web3 storytelling platform — REST API' },
             status: { type: 'string', enum: ['operational', 'degraded', 'maintenance'], example: 'operational' },
             version: { type: 'string', example: 'v1' },
@@ -243,7 +244,7 @@ const swaggerSetup = swaggerUi.setup(swaggerSpec, {
     .request-url { display: none !important; }
     .response-col_links { display: none !important; }
   `,
-  customSiteTitle: 'GroqTales API Documentation',
+  customSiteTitle: 'COMICRAFT API Documentation',
 });
 
 // JSON endpoint for the OpenAPI spec (must be before swagger UI middleware)
@@ -428,7 +429,7 @@ app.get('/api/health/bot', (req, res) => {
  *       - Health
  *     summary: Web3 / blockchain connectivity check
  *     description: |
- *       Returns Monad testnet connectivity, chain ID, latest block number,
+ *       Returns Ethereum mainnet connectivity, chain ID, latest block number,
  *       and platform signer status. Use this to verify Web3 infrastructure.
  *     responses:
  *       200:
@@ -441,14 +442,14 @@ app.get('/api/health/web3', async (req, res) => {
     res.json({
       status: health.connected ? 'healthy' : (health.configured ? 'degraded' : 'not_configured'),
       timestamp: new Date().toISOString(),
-      service: 'monad-testnet',
+      service: 'eth-mainnet',
       ...health,
     });
   } catch (error) {
     res.json({
       status: 'error',
       timestamp: new Date().toISOString(),
-      service: 'monad-testnet',
+      service: 'eth-mainnet',
       error: error.message,
     });
   }
@@ -479,7 +480,7 @@ app.get('/', (req, res) => {
   // Status is always operational when Supabase is configured
 
   res.json({
-    name: 'GroqTales Backend API',
+    name: 'COMICRAFT Backend API',
     description: 'AI-powered Web3 storytelling platform — REST API serving authentication, story management, AI generation, NFT operations, and more.',
     status: serverStatus,
     version: process.env.API_VERSION || 'v1',
@@ -611,6 +612,7 @@ app.use('/api/feeds', require('./routes/notification-feed'));
 app.use('/api/groq', require('./routes/groq'));
 app.use('/api/v1/ai', require('./routes/ai'));
 app.use('/api/v1/drafts', require('./routes/drafts'));
+app.use('/api/v1/tts', require('./routes/tts'));
 app.use('/api/v1/settings/notifications', require('./routes/settings/notifications'));
 app.use('/api/v1/settings/privacy', require('./routes/settings/privacy'));
 app.use('/api/v1/settings/wallet', require('./routes/settings/wallet'));
@@ -674,7 +676,7 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 connectDB().catch(err => console.error('Failed to connect to MongoDB on startup:', err.message));
 
 server = app.listen(PORT, () => {
-  logger.info(`GroqTales Backend API server running on port ${PORT}`);
+  logger.info(`COMICRAFT Backend API server running on port ${PORT}`);
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`Database: Supabase PostgreSQL${SUPABASE_URL ? ' (configured)' : ' (NOT configured)'}`);
   logger.info(`Health check: http://localhost:${PORT}/api/health`);

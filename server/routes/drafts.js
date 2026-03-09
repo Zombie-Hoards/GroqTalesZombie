@@ -434,4 +434,56 @@ router.delete('/', authRequired, async (req, res) => {
   }
 });
 
+
+// ─── List All User Drafts ────────────────────────────────────────────────────
+/**
+ * GET /api/v1/drafts/list
+ * Returns all drafts for the authenticated user, ordered by updated_at desc.
+ */
+router.get('/list', authRequired, async (req, res) => {
+  try {
+    const { limit = 20, storyType } = req.query;
+
+    let safeLimit = parseInt(String(limit), 10);
+    if (Number.isNaN(safeLimit) || safeLimit < 1) safeLimit = 20;
+    if (safeLimit > 100) safeLimit = 100;
+
+    let query = supabaseAdmin
+      .from('drafts')
+      .select('draft_key, story_type, story_format, current_title, current_genre, current_version, current_updated_at, created_at, updated_at')
+      .eq('owner_id', req.user.id)
+      .order('current_updated_at', { ascending: false })
+      .limit(safeLimit);
+
+    if (storyType && typeof storyType === 'string') {
+      query = query.eq('story_type', storyType);
+    }
+
+    const { data: drafts, error } = await query;
+
+    if (error) {
+      console.error('Failed to list drafts (DB error):', { error, query: req.query, userId: req.user.id });
+      return res.status(500).json({ error: 'Failed to fetch drafts' });
+    }
+
+    return res.json({
+      success: true,
+      data: (drafts || []).map(d => ({
+        draftKey: d.draft_key,
+        storyType: d.story_type,
+        storyFormat: d.story_format,
+        title: d.current_title || 'Untitled',
+        genre: d.current_genre || '',
+        version: d.current_version || 1,
+        updatedAt: d.current_updated_at || d.updated_at,
+        createdAt: d.created_at,
+      })),
+    });
+  } catch (error) {
+    console.error('Drafts list error:', error);
+    return res.status(500).json({ error: 'Failed to list drafts' });
+  }
+});
+
 module.exports = router;
+
