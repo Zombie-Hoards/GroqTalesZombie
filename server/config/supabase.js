@@ -40,17 +40,20 @@ function createUserClient(accessToken) {
     });
 }
 
-// Health check — verifies connectivity
+// Health check — verifies connectivity and measures latency
 async function checkSupabaseHealth() {
-    if (!supabaseAdmin) return { connected: false, note: 'Supabase not configured' };
+    if (!supabaseAdmin) return { connected: false, latency_ms: null, note: 'Supabase env vars not set (SUPABASE_URL / NEXT_PUBLIC_SUPABASE_URL)' };
+    const t0 = Date.now();
     try {
         const { error } = await supabaseAdmin.from('profiles').select('id').limit(1);
+        const latency_ms = Date.now() - t0;
+        // PGRST116 = row not found — still means DB is reachable
         if (error && error.code !== 'PGRST116') {
-            return { connected: false, error: error.message };
+            return { connected: false, latency_ms: null, error: error.message, note: 'Supabase reachable but query failed' };
         }
-        return { connected: true };
+        return { connected: true, latency_ms };
     } catch (err) {
-        return { connected: false, error: err.message };
+        return { connected: false, latency_ms: null, error: err.message, note: 'Supabase connection failed' };
     }
 }
 

@@ -7,7 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Supported Versions
 
-Active full support: 1.9.0 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+Active full support: 1.9.3 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+
+## [1.9.3] - 2026-03-10
+
+### Changed
+
+- **JWT Secret** (`.env.local`): Set `JWT_SECRET` to the Supabase project JWT signing key. This key is used by `server/utils/jwt.js` for signing/verifying backend tokens and by `server/routes/auth.js` for deterministic wallet password derivation.
+- **Google OAuth Callback URL** (`.env.local`): `GOOGLE_CALLBACK_URL` confirmed and set to `https://nipmqxecwnzwsmfrrkpl.supabase.co/auth/v1/callback`. This must also be registered in Google Cloud Console → OAuth 2.0 Credentials → Authorized Redirect URIs.
+
+## [1.9.2] - 2026-03-10
+
+### Fixed
+
+- **Backend Health — Supabase "not configured"** (`server/config/supabase.js`, `render.yaml`): Added `SUPABASE_URL` and `SUPABASE_ANON_KEY` alias environment variable declarations to `render.yaml` so the server-side Supabase config resolves them without requiring the `NEXT_PUBLIC_` prefix. Also added `JWT_REFRESH_SECRET` to the Render env declarations.
+- **Backend Health — latency_ms always null** (`server/config/supabase.js`): Added a `Date.now()` timer around the Supabase connectivity probe so `latency_ms` is correctly populated in the `/api/health` response when the database is reachable.
+- **Backend Health — `status: degraded` even when configured** (`server/backend.js`): Consolidated the two separate `if (!supabaseConfigured)` / `if (criticalServicesDown)` blocks into a single `if (!supabaseConfigured || !supabaseHealth.connected)` guard — eliminates the redundant double-degraded path.
+- **Backend Health — `feed_gallery: offline` when DB is configured** (`server/backend.js`): `feed_gallery` now reports `online` once Supabase is configured and the live ping succeeds, `degraded` if configured but the ping fails, and `offline` only when env vars are absent — instead of always mirroring the binary `connected` flag.
+- **Backend Health — `latency_ms` coercion** (`server/backend.js`): Changed `supabaseHealth.latency_ms || null` to `supabaseHealth.latency_ms ?? null` so a real `0 ms` latency is not coerced to `null`.
+- **Backend Health — Gemini model name** (`server/backend.js`): Changed hardcoded `'gemini-2.0-pro'` to `process.env.GEMINI_MODEL || 'gemini-2.0-flash'` to respect the configured model env var.
 
 ## [1.9.1] - 2026-03-09
 
