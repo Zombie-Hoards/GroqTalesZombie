@@ -11,10 +11,7 @@ interface ChatMessage {
 }
 
 // ── Constants ───────────────────────────────────────────────────────
-const API_URL =
-  (typeof window !== 'undefined'
-    ? process.env.NEXT_PUBLIC_API_URL
-    : undefined) ?? '';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://groqtales-backend-api.onrender.com';
 const HELPBOT_ENDPOINT = `${API_URL}/api/helpbot/chat`;
 
 const WELCOME_MESSAGE_CONTENT =

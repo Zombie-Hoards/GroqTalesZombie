@@ -160,7 +160,7 @@ export function UserNav() {
       >
         <DropdownMenuLabel className="bg-emerald-500/10 text-emerald-400 border-b border-white/10 py-3 font-semibold uppercase tracking-wider text-xs flex items-center justify-between">
           <span>User Controls</span>
-          {role !== 'user' && (
+          {role && role !== 'user' && roleBadgeStyles[role] && (
             <span className={`text-[9px] px-1.5 py-0.5 rounded border ${roleBadgeStyles[role].className}`}>
               {roleBadgeStyles[role].label}
             </span>

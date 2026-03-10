@@ -11,7 +11,16 @@ services:
     buildCommand: npm install && npm run build:backend
     startCommand: npm run start:backend
     healthCheckPath: /healthz
+    ipAllowList:
+      - source: 74.220.48.0/24
+        description: "Allowed IP Range 1"
+      - source: 74.220.56.0/24
+        description: "Allowed IP Range 2"
     envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: "http://groqtales-backend-api:3001"
+      - key: INTERNAL_API_URL
+        value: "http://groqtales-backend-api:3001"
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -32,19 +41,60 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false
       - key: REDIS_URL
-        sync: false
+        fromDatabase:
+          name: groqtales-redis
+          property: connectionString
       - key: JWT_SECRET
         sync: false
       - key: JWT_REFRESH_SECRET
         sync: false
       - key: CORS_ORIGIN
         value: https://groqtales.xyz
+        value: https://comicraft.xyz
+        value: https://groqtales.pages.dev
       - key: API_VERSION
         value: v1
       - key: GEMINI_API_KEY
         sync: false
       - key: GEMINI_MODEL
         value: gemini-2.5-pro
+      # Google OAuth
+      - key: GOOGLE_CLIENT_ID
+        value: "mock_google_id"
+      - key: GOOGLE_CLIENT_SECRET
+        value: "mock_google_secret"
+      - key: GOOGLE_CALLBACK_URL
+        value: "https://groqtales-backend-api.onrender.com/api/v1/auth/google/callback"
+      # WalletConnect
+      - key: NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID
+        value: "mock_wallet_project_id"
+      # NFTs & Signer
+      - key: STORY_NFT_CONTRACT_ADDRESS
+        value: "0x1234567890abcdef1234567890abcdef12345678"
+      - key: CRAFTS_MARKETPLACE_ADDRESS
+        value: "0xabcdef1234567890abcdef1234567890abcdef12"
+      - key: CRAFTS_TOKEN_ADDRESS
+        value: "0x7890abcdef1234567890abcdef1234567890abcd"
+      - key: PLATFORM_SIGNER_KEY
+        value: "mock_private_key"
+      # Unsplash
+      - key: NEXT_PUBLIC_UNSPLASH_API_KEY
+        value: "mock_unsplash_key"
+      # Email
+      - key: SMTP_HOST
+        value: "mock_smtp_host"
+      - key: SMTP_USER
+        value: "mock_smtp_user"
+      - key: SMTP_PORT
+        value: "587"
+      - key: SENDGRID_API_KEY
+        value: "mock_sendgrid_key"
+      # IPFS
+      - key: PINATA_JWT
+        value: "mock_pinata_jwt"
+      # TTS
+      - key: SARVAM_API_KEY
+        value: "mock_sarvam_key"
 
   # SDK Service (for future SDK implementations)
   - type: web
