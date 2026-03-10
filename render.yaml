@@ -26,9 +26,16 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      # Alias keys — set these in the Render dashboard to the same values as the NEXT_PUBLIC_ variants above
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
       - key: REDIS_URL
         sync: false
       - key: JWT_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
         sync: false
       - key: CORS_ORIGIN
         value: https://groqtales.xyz

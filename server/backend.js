@@ -312,8 +312,12 @@ const formatMicroseconds = (us) => (us / 1e6).toFixed(2) + 's';
 
 // Health check endpoint — comprehensive real-time diagnostics
 app.get(['/api/health', '/api/health/db'], async (req, res) => {
+  // supabaseAdmin is non-null when env vars are present
+  const { supabaseAdmin: _supabaseAdminCheck } = require('./config/supabase');
   const supabaseConfigured = !!SUPABASE_URL;
-  const supabaseHealth = supabaseConfigured ? await checkSupabaseHealth() : { connected: false, note: 'Supabase not configured' };
+  const supabaseHealth = supabaseConfigured
+    ? await checkSupabaseHealth()
+    : { connected: false, latency_ms: null, note: 'Supabase env vars not set — add NEXT_PUBLIC_SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY to Render dashboard' };
   const mem = process.memoryUsage();
   const cpu = process.cpuUsage();
 
@@ -321,15 +325,17 @@ app.get(['/api/health', '/api/health/db'], async (req, res) => {
   const groqConfigured = !!process.env.GROQ_API_KEY;
   const geminiConfigured = !!process.env.GEMINI_API_KEY;
 
-  // Determine overall system status
+  // Determine overall system status:
+  // - 'operational' = Supabase configured and reachable
+  // - 'degraded'    = Supabase configured but live ping failed, OR not configured at all
   let status = 'operational';
-  const criticalServicesDown = supabaseConfigured && !supabaseHealth.connected;
-  if (criticalServicesDown) {
+  if (!supabaseConfigured || !supabaseHealth.connected) {
     status = 'degraded';
   }
-  if (!supabaseConfigured) {
-    status = 'degraded'; // Database is critical
-  }
+
+  // feed_gallery is online whenever the client is initialised (env vars present)
+  // so it doesn't require an additional async ping on every health request.
+  const feedGalleryStatus = supabaseConfigured ? (supabaseHealth.connected ? 'online' : 'degraded') : 'offline';
 
   res.json({
     status,
@@ -351,7 +357,7 @@ app.get(['/api/health', '/api/health/db'], async (req, res) => {
       status: supabaseHealth.connected ? 'ok' : 'error',
       configured: supabaseConfigured,
       connected: supabaseHealth.connected,
-      latency_ms: supabaseHealth.latency_ms || null,
+      latency_ms: supabaseHealth.latency_ms ?? null,
       ...(supabaseHealth.error ? { error: supabaseHealth.error } : {}),
       ...(supabaseHealth.note ? { note: supabaseHealth.note } : {}),
     },
@@ -364,7 +370,7 @@ app.get(['/api/health', '/api/health/db'], async (req, res) => {
       gemini: {
         status: geminiConfigured ? 'available' : 'not_configured',
         configured: geminiConfigured,
-        model: geminiConfigured ? 'gemini-2.0-pro' : null,
+        model: geminiConfigured ? (process.env.GEMINI_MODEL || 'gemini-2.0-flash') : null,
       },
     },
     memory: {
@@ -378,7 +384,7 @@ app.get(['/api/health', '/api/health/db'], async (req, res) => {
       api: 'online',
       database: supabaseHealth.connected ? 'online' : (supabaseConfigured ? 'offline' : 'not configured'),
       ai_generation: groqConfigured || geminiConfigured ? 'online' : 'offline',
-      feed_gallery: supabaseHealth.connected ? 'online' : 'offline',
+      feed_gallery: feedGalleryStatus,
     },
     rateLimit: {
       windowMs: 15 * 60 * 1000,
