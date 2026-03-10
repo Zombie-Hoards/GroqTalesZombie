@@ -172,25 +172,7 @@ export default function RootLayout({
           src="/scroll-optimization.js"
           strategy="afterInteractive"
         />
-        <Script
-          id="pwa-register"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              try {
-                if ('serviceWorker' in navigator) {
-                  window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                      console.log('ServiceWorker registration gracefully failed or blocked: ', err.message);
-                    });
-                  });
-                }
-              } catch (e) {
-                // Ignore SW errors, likely blocked by client
-              }
-            `,
-          }}
-        />
+        {/* Removed PWA register script to prevent sw.js 404 errors in environments where static files aren't routed perfectly */}
       </head>
       <body
         className={`${inter.className} ${comicNeue.variable} optimize-paint`}

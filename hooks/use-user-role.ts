@@ -22,7 +22,12 @@ export function useUserRole() {
                     return;
                 }
 
-                const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+                const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+                if (!baseUrl) {
+                    setRole(null);
+                    setLoading(false);
+                    return;
+                }
                 const res = await fetch(`${baseUrl}/api/v1/auth/me`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });

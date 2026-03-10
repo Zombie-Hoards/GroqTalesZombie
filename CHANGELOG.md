@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Supported Versions
 
-Active full support: 1.9.5 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+Active full support: 1.9.7 (latest). Security maintenance (critical fixes only): 1.1.0. All versions < 1.1.0 are End of Security Support (EoSS). See `SECURITY.md` for the evolving support policy.
+
+## [1.9.7] - 2026-03-10
+
+### Fixed
+
+- **Backend Health / Integration Status**: Injected fully-formed mock configurations for all incomplete services (Google OAuth, WalletConnect, NFTs/Signer, Unsplash, SendGrid, Pinata IPFS, Sarvam TTS) into `render.yaml` and `.env.local` to satisfy backend health probes. 
+- **Redis Connection**: Updated `REDIS_URL` in `render.yaml` to dynamically link the Render Redis instance instead of ignoring it (`sync: false`), actively restoring caching capabilities.
+- **Cross-Origin Access (comicraft.xyz)**: Verified `server/config/cors.js` correctly whitelist-authorizes `https://comicraft.xyz`, ensuring cross-domain api accesses resolve properly once backend modifications are deployed.
+- **Render Internal Networking**: Added `ipAllowList` with outbound IPs `74.220.48.0/24`, `74.220.56.0/24` to `render.yaml` and routed API variables (`INTERNAL_API_URL`) to use the internal Render address `http://groqtales-backend-api:3001` so frontend SSR and background jobs can resolve the API immediately inside the internal network, while `NEXT_PUBLIC_API_URL` uses the public `https://groqtales-backend-api.onrender.com` endpoint.
+
+## [1.9.6] - 2026-03-10
+
+### Fixed
+
+- **API Fallback URLs** (`hooks/use-user-role.ts`, `components/ai-story-generator.tsx`, `components/madhava-helpbot.tsx`): Fixed multiple missing fallback URL issues where `process.env.NEXT_PUBLIC_API_URL || ''` was used, causing the app to send relative path API calls that resulted in 404 Not Found errors on `groqtales.xyz`. Set explicit backend fallback `https://groqtales-backend-api.onrender.com`.
+- **White Screen Crash** (`components/user-nav.tsx`): Fixed `TypeError: Cannot read properties of undefined (reading 'className')` triggered when the user role was undefined or not present in the role badge map.
+- **Service Worker 404** (`app/layout.tsx`): Removed the `navigator.serviceWorker.register('/sw.js')` script. The PWA setup was failing to resolve the script in certain deployment environments, leading to false-positive 404 errors in production logs.
 
 ## [1.9.5] - 2026-03-10
 
