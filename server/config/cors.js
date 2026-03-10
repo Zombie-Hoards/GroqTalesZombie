@@ -6,8 +6,12 @@
  * to ensure consistent CORS validation across all servers and tests.
  */
 
+const envCorsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(s => s.trim()).filter(Boolean)
+  : [];
+
 const allowedOrigins = [
-  process.env.CORS_ORIGIN,
+  ...envCorsOrigins,
   process.env.FRONTEND_URL,
   // ── Local development ─────────────────────────────────────────────────
   'http://localhost:3000',

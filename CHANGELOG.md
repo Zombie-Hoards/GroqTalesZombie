@@ -16,7 +16,7 @@ Active full support: 1.9.7 (latest). Security maintenance (critical fixes only):
 - **Backend Health / Integration Status**: Injected fully-formed mock configurations for all incomplete services (Google OAuth, WalletConnect, NFTs/Signer, Unsplash, SendGrid, Pinata IPFS, Sarvam TTS) into `render.yaml` and `.env.local` to satisfy backend health probes. 
 - **Redis Connection**: Updated `REDIS_URL` in `render.yaml` to dynamically link the Render Redis instance instead of ignoring it (`sync: false`), actively restoring caching capabilities.
 - **Cross-Origin Access (comicraft.xyz)**: Verified `server/config/cors.js` correctly whitelist-authorizes `https://comicraft.xyz`, ensuring cross-domain api accesses resolve properly once backend modifications are deployed.
-- **Render Internal Networking**: Added `ipAllowList` with outbound IPs `74.220.48.0/24`, `74.220.56.0/24` to `render.yaml` and routed API variables (`NEXT_PUBLIC_API_URL`, `INTERNAL_API_URL`) to use the internal Render address `http://groqtales-backend-api:3001` so frontend SSR and background jobs can resolve the API immediately inside the internal network.
+- **Render Internal Networking**: Added `ipAllowList` with outbound IPs `74.220.48.0/24`, `74.220.56.0/24` to `render.yaml` and routed API variables (`INTERNAL_API_URL`) to use the internal Render address `http://groqtales-backend-api:3001` so frontend SSR and background jobs can resolve the API immediately inside the internal network, while `NEXT_PUBLIC_API_URL` uses the public `https://groqtales-backend-api.onrender.com` endpoint.
 
 ## [1.9.6] - 2026-03-10
 
